@@ -245,241 +245,238 @@ export default function Shangar() {
             </header>
 
             {/* Main Interactive Canvas */}
-            <div className="glass-panel" style={{
-                flex: 1,
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '20px',
-                overflow: 'hidden',
-                borderRadius: 'var(--border-radius-xl)', // Extra round for modern feel
-                border: 'var(--glass-border)',
-                boxShadow: 'inset 0 0 20px rgba(255,255,255,0.5), var(--shadow-lg)'
-            }}>
-                {/* Color/Hue Slider (Only for Lower, Upper, Pagh) */}
-                {['lower', 'upper', 'pagh'].includes(activeCategory) && equipped[activeCategory] && (
-                    <div className="glass-panel" style={{
-                        position: 'absolute',
-                        left: '40px',
-                        bottom: '20px',
-                        transformOrigin: 'left center',
-                        transform: 'rotate(-90deg)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '12px',
-                        zIndex: 50,
-                        width: 'min(320px, 70vh)',
-                        height: '48px',
-                        padding: '0 16px',
-                        borderRadius: '99px',
-                        boxShadow: 'var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.8) inset',
-                        border: 'none', // Overriding glass-panel static border for soft inset look
-                        background: 'rgba(255, 255, 255, 0.6)'
-                    }}>
-                        {/* Counter-rotate the icons to stay upright since the container is rotated -90deg */}
-                        <div style={{ transform: 'rotate(90deg)', display: 'flex', color: 'var(--text-muted)' }}>
-                            <Circle size={16} />
-                        </div>
-                        <input
-                            type="range"
-                            min="0"
-                            max="360"
-                            value={hues[activeCategory]}
-                            onChange={(e) => setHues(prev => ({ ...prev, [activeCategory]: parseInt(e.target.value) }))}
-                            className="rainbow-slider"
-                            style={{ '--thumb-color': `hsl(${hues[activeCategory]}, 100%, 50%)`, flex: 1 }}
-                        />
-                        <div style={{ transform: 'rotate(90deg)', display: 'flex', color: 'var(--primary-color)' }}>
-                            <Palette size={20} />
-                        </div>
-                    </div>
-                )}
-                {/* Real Murti Image */}
-                <div ref={murtiRef} style={{ position: 'relative', width: '220px', height: 'auto', display: 'flex', justifyContent: 'center' }}>
-                    <img
-                        src={selectedMurti ? selectedMurti.image : "/murti/murti.png"}
-                        alt="Murti"
-                        style={{
-                            width: '100%',
-                            height: 'auto',
-                            objectFit: 'contain',
-                            filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))'
-                        }}
-                        onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML += '<div style="padding: 20px; text-align: center; color: var(--text-muted); border: 2px dashed var(--primary-light); border-radius: 12px; font-size: 0.9rem;">Please save the image as<br/><b>public/murti/murti.png</b></div>';
-                        }}
-                    />
-
-                    {/* Pagh/Head Layer Overlay */}
-                    {equipped.pagh && (equipped.pagh.image || equipped.pagh.actual) && (
-                        <img src={equipped.pagh.actual || equipped.pagh.image} alt="Pagh" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 20, pointerEvents: 'none', filter: `drop-shadow(0 5px 15px rgba(0,0,0,0.2)) hue-rotate(${hues.pagh}deg)` }} />
-                    )}
-
-                    {/* Earrings Layer Overlay */}
-                    {equipped.earrings && (equipped.earrings.image || equipped.earrings.actual) && (
-                        <img src={equipped.earrings.actual || equipped.earrings.image} alt="Earrings" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 18, pointerEvents: 'none', filter: 'drop-shadow(0 5px 15px rgba(0,0,0,0.2))' }} />
-                    )}
-
-                    {/* Upper Wear Layer Overlay */}
-                    {equipped.upper && (equipped.upper.image || equipped.upper.actual) && (
-                        <img src={equipped.upper.actual || equipped.upper.image} alt="Upper Wear" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 5, pointerEvents: 'none', filter: `drop-shadow(0 5px 15px rgba(0,0,0,0.2)) hue-rotate(${hues.upper}deg)` }} />
-                    )}
-
-                    {/* Lower Wear Layer Overlay */}
-                    {equipped.lower && (equipped.lower.image || equipped.lower.actual) && (
-                        <img src={equipped.lower.actual || equipped.lower.image} alt="Lower Wear" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 4, pointerEvents: 'none', filter: `drop-shadow(0 5px 15px rgba(0,0,0,0.2)) hue-rotate(${hues.lower}deg)` }} />
-                    )}
-
-                    {/* Khesh Layer Overlay */}
-                    {equipped.khesh && (equipped.khesh.image || equipped.khesh.actual) && (
-                        <img src={equipped.khesh.actual || equipped.khesh.image} alt="Khesh" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 12, pointerEvents: 'none', filter: 'drop-shadow(0 5px 15px rgba(0,0,0,0.2))' }} />
-                    )}
-
-                    {/* Kantho Layer Overlay */}
-                    {equipped.kantho && (equipped.kantho.image || equipped.kantho.actual) && (
-                        <img src={equipped.kantho.actual || equipped.kantho.image} alt="Kantho" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 15, pointerEvents: 'none', filter: 'drop-shadow(0 5px 15px rgba(0,0,0,0.2))' }} />
-                    )}
-
-                    {/* Right Hand Layer Overlay */}
-                    {equipped.right_hand && (equipped.right_hand.image || equipped.right_hand.actual) && (
-                        <img src={equipped.right_hand.actual || equipped.right_hand.image} alt="Right Hand" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 25, pointerEvents: 'none', filter: 'drop-shadow(0 5px 15px rgba(0,0,0,0.2))' }} />
-                    )}
-
-                    {/* Watermark (Only visible during download) */}
-                    <img
-                        src="/watermark.png"
-                        alt="Loyadham Watermark"
-                        style={{
+            <div className="shangar-layout">
+                <div className="glass-panel murti-section" style={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: 'var(--border-radius-xl)', // Extra round for modern feel
+                    border: 'var(--glass-border)',
+                    boxShadow: 'inset 0 0 20px rgba(255,255,255,0.5), var(--shadow-lg)'
+                }}>
+                    {/* Color/Hue Slider (Only for Lower, Upper, Pagh) */}
+                    {['lower', 'upper', 'pagh'].includes(activeCategory) && equipped[activeCategory] && (
+                        <div className="glass-panel" style={{
                             position: 'absolute',
-                            bottom: '10px',
-                            left: '5px',
-                            width: '80px',
-                            opacity: isDownloading ? 0.9 : 0,
-                            zIndex: 100,
-                            pointerEvents: 'none',
-                            transition: 'opacity 0.1s'
-                        }}
-                    />
-                </div>
+                            left: '40px',
+                            bottom: '20px',
+                            transformOrigin: 'left center',
+                            transform: 'rotate(-90deg)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            zIndex: 50,
+                            width: 'min(320px, 70vh)',
+                            height: '48px',
+                            padding: '0 16px',
+                            borderRadius: '99px',
+                            boxShadow: 'var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.8) inset',
+                            border: 'none', // Overriding glass-panel static border for soft inset look
+                            background: 'rgba(255, 255, 255, 0.6)'
+                        }}>
+                            {/* Counter-rotate the icons to stay upright since the container is rotated -90deg */}
+                            <div style={{ transform: 'rotate(90deg)', display: 'flex', color: 'var(--text-muted)' }}>
+                                <Circle size={16} />
+                            </div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="360"
+                                value={hues[activeCategory]}
+                                onChange={(e) => setHues(prev => ({ ...prev, [activeCategory]: parseInt(e.target.value) }))}
+                                className="rainbow-slider"
+                                style={{ '--thumb-color': `hsl(${hues[activeCategory]}, 100%, 50%)`, flex: 1 }}
+                            />
+                            <div style={{ transform: 'rotate(90deg)', display: 'flex', color: 'var(--primary-color)' }}>
+                                <Palette size={20} />
+                            </div>
+                        </div>
+                    )}
+                    <div ref={murtiRef} style={{ position: 'relative', width: '100%', maxWidth: '480px', height: 'auto', display: 'flex', justifyContent: 'center' }}>
+                        <img
+                            src={selectedMurti ? selectedMurti.image : "/murti/murti.png"}
+                            alt="Murti"
+                            style={{
+                                width: '100%',
+                                height: 'auto',
+                                maxHeight: '85vh',
+                                objectFit: 'contain',
+                                filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))'
+                            }}
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.style.display = 'none';
+                                e.target.parentElement.innerHTML += '<div style="padding: 20px; text-align: center; color: var(--text-muted); border: 2px dashed var(--primary-light); border-radius: 12px; font-size: 0.9rem;">Please save the image as<br/><b>public/murti/murti.png</b></div>';
+                            }}
+                        />
 
-                {/* Completion Message */}
-                {rajipoEarned && (
-                    <div style={{
-                        position: 'absolute',
-                        top: '20px',
-                        background: 'rgba(255,255,255,0.9)',
-                        padding: '8px 16px',
-                        borderRadius: '20px',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        color: 'var(--primary-dark)',
-                        boxShadow: 'var(--shadow-md)',
-                        animation: 'fadeIn 0.5s'
-                    }}>
-                        Beautiful Shangar! 🙏
+                        {/* Pagh/Head Layer Overlay */}
+                        {equipped.pagh && (equipped.pagh.image || equipped.pagh.actual) && (
+                            <img src={equipped.pagh.actual || equipped.pagh.image} alt="Pagh" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 20, pointerEvents: 'none', filter: `drop-shadow(0 5px 15px rgba(0,0,0,0.2)) hue-rotate(${hues.pagh}deg)` }} />
+                        )}
+
+                        {/* Earrings Layer Overlay */}
+                        {equipped.earrings && (equipped.earrings.image || equipped.earrings.actual) && (
+                            <img src={equipped.earrings.actual || equipped.earrings.image} alt="Earrings" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 18, pointerEvents: 'none', filter: 'drop-shadow(0 5px 15px rgba(0,0,0,0.2))' }} />
+                        )}
+
+                        {/* Upper Wear Layer Overlay */}
+                        {equipped.upper && (equipped.upper.image || equipped.upper.actual) && (
+                            <img src={equipped.upper.actual || equipped.upper.image} alt="Upper Wear" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 5, pointerEvents: 'none', filter: `drop-shadow(0 5px 15px rgba(0,0,0,0.2)) hue-rotate(${hues.upper}deg)` }} />
+                        )}
+
+                        {/* Lower Wear Layer Overlay */}
+                        {equipped.lower && (equipped.lower.image || equipped.lower.actual) && (
+                            <img src={equipped.lower.actual || equipped.lower.image} alt="Lower Wear" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 4, pointerEvents: 'none', filter: `drop-shadow(0 5px 15px rgba(0,0,0,0.2)) hue-rotate(${hues.lower}deg)` }} />
+                        )}
+
+                        {/* Khesh Layer Overlay */}
+                        {equipped.khesh && (equipped.khesh.image || equipped.khesh.actual) && (
+                            <img src={equipped.khesh.actual || equipped.khesh.image} alt="Khesh" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 12, pointerEvents: 'none', filter: 'drop-shadow(0 5px 15px rgba(0,0,0,0.2))' }} />
+                        )}
+
+                        {/* Kantho Layer Overlay */}
+                        {equipped.kantho && (equipped.kantho.image || equipped.kantho.actual) && (
+                            <img src={equipped.kantho.actual || equipped.kantho.image} alt="Kantho" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 15, pointerEvents: 'none', filter: 'drop-shadow(0 5px 15px rgba(0,0,0,0.2))' }} />
+                        )}
+
+                        {/* Right Hand Layer Overlay */}
+                        {equipped.right_hand && (equipped.right_hand.image || equipped.right_hand.actual) && (
+                            <img src={equipped.right_hand.actual || equipped.right_hand.image} alt="Right Hand" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 25, pointerEvents: 'none', filter: 'drop-shadow(0 5px 15px rgba(0,0,0,0.2))' }} />
+                        )}
+
+                        {/* Watermark (Only visible during download) */}
+                        <img
+                            src="/watermark.png"
+                            alt="Loyadham Watermark"
+                            style={{
+                                position: 'absolute',
+                                bottom: '10px',
+                                left: '5px',
+                                width: '80px',
+                                opacity: isDownloading ? 0.9 : 0,
+                                zIndex: 100,
+                                pointerEvents: 'none',
+                                transition: 'opacity 0.1s'
+                            }}
+                        />
                     </div>
-                )}
-            </div>
 
-            {/* Wardrobe Controls */}
-            <div className="glass-panel" style={{ flexShrink: 0, overflow: 'hidden' }}>
-                {/* Action Bar */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
-                    <button onClick={undo} disabled={historyIndex === 0} className="btn" style={{ background: historyIndex === 0 ? 'rgba(255,255,255,0.4)' : 'white', color: historyIndex === 0 ? '#aaa' : 'var(--text-main)', boxShadow: historyIndex === 0 ? 'none' : 'var(--shadow-sm)' }}>
-                        <Undo2 size={16} /> <span>Undo</span>
-                    </button>
-                    <button onClick={redo} disabled={historyIndex === history.length - 1} className="btn" style={{ background: historyIndex === history.length - 1 ? 'rgba(255,255,255,0.4)' : 'white', color: historyIndex === history.length - 1 ? '#aaa' : 'var(--text-main)', boxShadow: historyIndex === history.length - 1 ? 'none' : 'var(--shadow-sm)' }}>
-                        <Redo2 size={16} /> <span>Redo</span>
-                    </button>
-                    <button onClick={clearAll} className="btn" style={{ background: '#FFF0F0', color: '#E53E3E', boxShadow: 'var(--shadow-sm)' }}>
-                        <Trash2 size={16} /> <span>Clear</span>
-                    </button>
+                    {/* Completion Message */}
+                    {rajipoEarned && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '20px',
+                            background: 'rgba(255,255,255,0.9)',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
+                            color: 'var(--primary-dark)',
+                            boxShadow: 'var(--shadow-md)',
+                            animation: 'fadeIn 0.5s'
+                        }}>
+                            Beautiful Shangar! 🙏
+                        </div>
+                    )}
                 </div>
 
-                {/* Category Tabs */}
-                <div className="scrollable-row" style={{ display: 'flex', gap: '8px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-                    {CATEGORIES.map(cat => {
-                        const Icon = cat.icon;
-                        const isActive = activeCategory === cat.id;
-                        return (
-                            <button
-                                key={cat.id}
-                                onClick={() => setActiveCategory(cat.id)}
-                                style={{
-                                    flex: '0 0 auto',
-                                    minWidth: '90px',
-                                    padding: '10px 16px',
-                                    background: isActive ? 'linear-gradient(135deg, var(--primary-color), var(--secondary-color))' : 'rgba(255,255,255,0.5)',
-                                    color: isActive ? 'white' : 'var(--text-muted)',
-                                    borderRadius: '99px', // Pill shape
-                                    border: isActive ? 'none' : '1px solid rgba(255,255,255,0.6)',
-                                    boxShadow: isActive ? '0 4px 15px rgba(255, 94, 0, 0.3)' : 'none',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-                                    transform: isActive ? 'translateY(-2px)' : 'none'
-                                }}
-                            >
-                                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-                                <span style={{ fontSize: '0.8rem', fontWeight: isActive ? '700' : '500', letterSpacing: '0.02em' }}>{cat.name}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                {/* Wardrobe Controls */}
+                <div className="glass-panel controls-section" style={{ overflow: 'hidden', borderRadius: 'var(--border-radius-xl)', border: 'var(--glass-border)', display: 'flex', flexDirection: 'column' }}>
+                    {/* Action Bar */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
+                        <button onClick={undo} disabled={historyIndex === 0} className="btn" style={{ background: historyIndex === 0 ? 'rgba(255,255,255,0.4)' : 'white', color: historyIndex === 0 ? '#aaa' : 'var(--text-main)', boxShadow: historyIndex === 0 ? 'none' : 'var(--shadow-sm)' }}>
+                            <Undo2 size={16} /> <span>Undo</span>
+                        </button>
+                        <button onClick={redo} disabled={historyIndex === history.length - 1} className="btn" style={{ background: historyIndex === history.length - 1 ? 'rgba(255,255,255,0.4)' : 'white', color: historyIndex === history.length - 1 ? '#aaa' : 'var(--text-main)', boxShadow: historyIndex === history.length - 1 ? 'none' : 'var(--shadow-sm)' }}>
+                            <Redo2 size={16} /> <span>Redo</span>
+                        </button>
+                        <button onClick={clearAll} className="btn" style={{ background: '#FFF0F0', color: '#E53E3E', boxShadow: 'var(--shadow-sm)' }}>
+                            <Trash2 size={16} /> <span>Clear</span>
+                        </button>
+                    </div>
 
-                {/* Items Grid */}
-                <div className="scrollable-row" style={{ padding: '20px 16px', display: 'flex' }}>
-                    <div style={{ display: 'flex', gap: '16px', margin: '0 auto' }}>
-                        {ITEMS[activeCategory].map(item => {
-                            const isEquipped = equipped[activeCategory]?.id === item.id;
+                    {/* Category Tabs */}
+                    <div className="scrollable-row" style={{ display: 'flex', gap: '8px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+                        {CATEGORIES.map(cat => {
+                            const Icon = cat.icon;
+                            const isActive = activeCategory === cat.id;
                             return (
                                 <button
-                                    key={item.id}
-                                    onClick={() => equipItem(activeCategory, item)}
+                                    key={cat.id}
+                                    onClick={() => setActiveCategory(cat.id)}
                                     style={{
-                                        minWidth: '85px',
-                                        height: '85px',
-                                        borderRadius: 'var(--border-radius-lg)',
-                                        background: isEquipped ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)',
-                                        border: isEquipped ? '3px solid var(--primary-color)' : '1px solid rgba(255,255,255,0.8)',
+                                        flex: '0 0 auto',
+                                        minWidth: '90px',
+                                        padding: '10px 16px',
+                                        background: isActive ? 'linear-gradient(135deg, var(--primary-color), var(--secondary-color))' : 'rgba(255,255,255,0.5)',
+                                        color: isActive ? 'white' : 'var(--text-muted)',
+                                        borderRadius: '99px', // Pill shape
+                                        border: isActive ? 'none' : '1px solid rgba(255,255,255,0.6)',
+                                        boxShadow: isActive ? '0 4px 15px rgba(255, 94, 0, 0.3)' : 'none',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
+                                        gap: '6px',
                                         cursor: 'pointer',
-                                        boxShadow: isEquipped ? '0 8px 25px rgba(255,94,0,0.25)' : 'var(--shadow-sm)',
-                                        transform: isEquipped ? 'scale(1.08) translateY(-4px)' : 'scale(1)',
                                         transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-                                        padding: '10px'
+                                        transform: isActive ? 'translateY(-2px)' : 'none'
                                     }}
                                 >
-                                    {item.id === 'none' ? (
-                                        <div style={{ width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                                            <XCircle size={32} />
-                                        </div>
-                                    ) : (item.image || item.preview || item.actual) ? (
-                                        <div style={{ width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <img src={item.preview || item.actual || item.image} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                                        </div>
-                                    ) : (
-                                        <div style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: '50%',
-                                            background: item.color,
-                                            border: item.border ? `2px solid ${item.border}` : '1px solid rgba(0,0,0,0.1)'
-                                        }} />
-                                    )}
+                                    <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                                    <span style={{ fontSize: '0.8rem', fontWeight: isActive ? '700' : '500', letterSpacing: '0.02em' }}>{cat.name}</span>
                                 </button>
                             );
                         })}
+                    </div>
+
+                    {/* Items Grid */}
+                    <div className="scrollable-row" style={{ padding: '20px 16px', display: 'flex' }}>
+                        <div style={{ display: 'flex', gap: '16px', margin: '0 auto' }}>
+                            {ITEMS[activeCategory].map(item => {
+                                const isEquipped = equipped[activeCategory]?.id === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => equipItem(activeCategory, item)}
+                                        style={{
+                                            minWidth: '85px',
+                                            height: '85px',
+                                            borderRadius: 'var(--border-radius-lg)',
+                                            background: isEquipped ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)',
+                                            border: isEquipped ? '3px solid var(--primary-color)' : '1px solid rgba(255,255,255,0.8)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            boxShadow: isEquipped ? '0 8px 25px rgba(255,94,0,0.25)' : 'var(--shadow-sm)',
+                                            transform: isEquipped ? 'scale(1.08) translateY(-4px)' : 'scale(1)',
+                                            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                                            padding: '10px'
+                                        }}
+                                    >
+                                        {item.id === 'none' ? (
+                                            <div style={{ width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                                <XCircle size={32} />
+                                            </div>
+                                        ) : (item.image || item.preview || item.actual) ? (
+                                            <div style={{ width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <img src={item.preview || item.actual || item.image} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: '50%',
+                                                background: item.color,
+                                                border: item.border ? `2px solid ${item.border}` : '1px solid rgba(0,0,0,0.1)'
+                                            }} />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

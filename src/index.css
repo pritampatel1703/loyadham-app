@@ -186,6 +186,12 @@ h6 {
   animation: fadeIn 0.4s ease-out;
 }
 
+@media (min-width: 768px) {
+  .page-container {
+    max-width: 1200px;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -293,6 +299,52 @@ h6 {
 
   100% {
     transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+/* Responsive Desktop/Tablet Layout for Shangar Page */
+.shangar-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+.murti-section {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.controls-section {
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .shangar-layout {
+    flex-direction: row;
+    align-items: stretch;
+    height: 100%;
+    overflow: hidden;
+    /* Keep it contained */
+  }
+
+  .murti-section {
+    flex: 1;
+    height: 100%;
+    margin-bottom: 0 !important;
+  }
+
+  .controls-section {
+    width: 400px;
+    /* Fixed width for controls panel on desktop */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    /* Allow controls to scroll independently */
   }
 }
 

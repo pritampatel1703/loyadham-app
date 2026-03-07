@@ -1,40 +1,34 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  /* Loyal Spiritual Saffron / Gold color palette */
-  --primary-color: #FF7B00;
-  /* Deep Saffron */
-  --primary-light: #FFA64D;
-  --primary-dark: #cc6200;
+  /* Rich, vibrant Spiritual Palette */
+  --primary-color: #FF5E00;
+  /* More vibrant neon orange */
+  --primary-light: #FF884D;
+  --primary-dark: #C24200;
 
-  --secondary-color: #F8B400;
-  /* Spiritual Gold */
+  --secondary-color: #FFB800;
+  /* Brighter gold */
 
-  --bg-color: #FDFBF7;
-  /* Soft warm paper white */
-  --surface-color: #FFFFFF;
+  --bg-color: #Fdfaf6;
+  --surface-color: rgba(255, 255, 255, 0.6);
+  /* Translucent by default */
 
-  --text-main: #2A1A10;
-  /* Soft dark brown instead of black */
-  --text-muted: #7E6C5F;
+  --text-main: #1A0D05;
+  --text-muted: #8b7566;
 
-  --accent-blue: #1A365D;
-  /* Deep calm blue */
-  --accent-red: #C53030;
-  /* Tilak Red */
-  --accent-green: #2F855A;
+  --border-radius-sm: 10px;
+  --border-radius-md: 20px;
+  --border-radius-lg: 32px;
+  --border-radius-xl: 40px;
 
-  --nav-bg: rgba(255, 255, 255, 0.85);
-
-  --border-radius-sm: 8px;
-  --border-radius-md: 16px;
-  --border-radius-lg: 24px;
-  --border-radius-xl: 32px;
-
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.12);
-  --shadow-glow: 0 0 20px rgba(255, 123, 0, 0.2);
+  /* Richer, multi-layered shadows for depth */
+  --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 10px 25px rgba(255, 94, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 20px 40px rgba(255, 94, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 30px rgba(255, 94, 0, 0.3);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+  --glass-border-strong: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 * {
@@ -50,9 +44,27 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
-  /* subtle pattern or gradient background */
-  background-image: radial-gradient(circle at top right, rgba(255, 123, 0, 0.05), transparent 40%),
-    radial-gradient(circle at bottom left, rgba(248, 180, 0, 0.05), transparent 40%);
+  /* Dynamic Animated Premium Background */
+  background:
+    radial-gradient(circle at 15% 50%, rgba(255, 94, 0, 0.08), transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(255, 184, 0, 0.12), transparent 50%),
+    radial-gradient(circle at 50% 80%, rgba(255, 0, 128, 0.05), transparent 50%);
+  background-size: 200% 200%;
+  animation: ambientBg 15s ease infinite alternate;
+}
+
+@keyframes ambientBg {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 #root {
@@ -69,23 +81,34 @@ h3,
 h4,
 h5,
 h6 {
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color), #FF007B);
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: textShine 4s linear infinite;
 }
 
-/* Glassmorphism Utilities */
+@keyframes textShine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Premium Apple-Style Glassmorphism */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: var(--glass-border);
+  border-top: var(--glass-border-strong);
+  border-left: var(--glass-border-strong);
   box-shadow: var(--shadow-md);
   border-radius: var(--border-radius-lg);
 }
@@ -230,12 +253,55 @@ h6 {
   }
 }
 
+/* Background floating animated orbs for deep immersion */
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  z-index: -1;
+  pointer-events: none;
+  animation: floatOrb 10s ease-in-out infinite alternate;
+}
+
+.orb-1 {
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 184, 0, 0.15);
+  top: -50px;
+  left: -50px;
+  animation-duration: 12s;
+}
+
+.orb-2 {
+  width: 400px;
+  height: 400px;
+  background: rgba(255, 94, 0, 0.1);
+  bottom: -100px;
+  right: -50px;
+  animation-duration: 15s;
+  animation-delay: -5s;
+}
+
+@keyframes floatOrb {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+
+  100% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
 /* Rainbow Color Slider (Rotated Horizontally for Browser Compatibility) */
 .rainbow-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 250px;
-  height: 24px;
+  /* width: 100%; Handled by flex: 1 physically now */
+  height: 28px;
   /* Give container enough height to contain the thumb without clipping */
   background: transparent;
   outline: none;
@@ -245,42 +311,78 @@ h6 {
 
 .rainbow-slider::-webkit-slider-runnable-track {
   width: 100%;
-  height: 8px;
+  height: 6px;
   /* Defined track thickness */
   background: linear-gradient(to right, #ff0000, #ff8000, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff, #ff00ff, #ff0000);
   border-radius: 10px;
-  box-shadow: var(--shadow-md);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .rainbow-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--thumb-color, var(--primary-color));
-  border: 3px solid white;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 4px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   cursor: pointer;
-  margin-top: -8px;
-  /* (Track Height 8px - Thumb Height 24px) / 2 = -8px offset to center */
+  margin-top: -11px;
+  /* (Track Height 6px - Thumb Height 28px) / 2 = -11px offset to center */
+  transition: transform 0.1s;
+}
+
+.rainbow-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
 }
 
 .rainbow-slider::-moz-range-track {
   width: 100%;
-  height: 8px;
+  height: 6px;
   background: linear-gradient(to right, #ff0000, #ff8000, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff, #ff00ff, #ff0000);
   border-radius: 10px;
-  box-shadow: var(--shadow-md);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .rainbow-slider::-moz-range-thumb {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--thumb-color, var(--primary-color));
-  border: 3px solid white;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 4px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   border-style: solid;
+  transition: transform 0.1s;
+}
+
+.rainbow-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+}
+
+/* Custom Elegant Scrollbar for Horizontal Lists */
+.scrollable-row {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 123, 0, 0.4) transparent;
+}
+
+.scrollable-row::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scrollable-row::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 10px;
+}
+
+.scrollable-row::-webkit-scrollbar-thumb {
+  background: rgba(255, 123, 0, 0.4);
+  border-radius: 10px;
+}
+
+.scrollable-row::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
 }

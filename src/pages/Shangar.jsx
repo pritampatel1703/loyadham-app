@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Shirt, Circle, Flower2, Sparkles, Hand, Undo2, Redo2, Trash2, XCircle, Download } from 'lucide-react';
+import { Shirt, Circle, Flower2, Sparkles, Hand, Undo2, Redo2, Trash2, XCircle, Download, Palette } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import download from 'downloadjs';
 
@@ -188,9 +188,13 @@ export default function Shangar() {
     // If no murti is selected and there are multiple options, show selection screen
     if (!selectedMurti && ITEMS.murti.length > 0) {
         return (
-            <div className="page-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <h2 style={{ marginBottom: '24px', color: 'var(--primary-color)', textAlign: 'center' }}>Select a Swaroop</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', width: '100%', maxWidth: '500px' }}>
+            <div className="page-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                {/* Immersive Background Orbs */}
+                <div className="bg-orb orb-1"></div>
+                <div className="bg-orb orb-2"></div>
+
+                <h2 className="text-gradient" style={{ marginBottom: '32px', textAlign: 'center', fontSize: '2rem' }}>Choose a Swaroop</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '24px', width: '100%', maxWidth: '600px', padding: '20px' }}>
                     {ITEMS.murti.map((murti) => (
                         <button
                             key={murti.id}
@@ -213,9 +217,12 @@ export default function Shangar() {
     }
 
     return (
-        <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '20px' }}>
+        <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '20px', position: 'relative' }}>
+            {/* Immersive Background Orbs */}
+            <div className="bg-orb orb-1"></div>
+            <div className="bg-orb orb-2"></div>
 
-            <header style={{ marginBottom: '16px', flexShrink: 0 }}>
+            <header style={{ marginBottom: '16px', flexShrink: 0, padding: '0 10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h1 className="text-gradient" style={{ fontSize: '1.6rem', marginBottom: '4px' }}>Shangar</h1>
@@ -244,24 +251,37 @@ export default function Shangar() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '16px',
+                marginBottom: '20px',
                 overflow: 'hidden',
-                background: 'radial-gradient(circle, rgba(255,255,255,0.8), rgba(253,251,247,0.3))'
+                borderRadius: 'var(--border-radius-xl)', // Extra round for modern feel
+                border: 'var(--glass-border)',
+                boxShadow: 'inset 0 0 20px rgba(255,255,255,0.5), var(--shadow-lg)'
             }}>
                 {/* Color/Hue Slider (Only for Lower, Upper, Pagh) */}
                 {['lower', 'upper', 'pagh'].includes(activeCategory) && equipped[activeCategory] && (
-                    <div style={{
+                    <div className="glass-panel" style={{
                         position: 'absolute',
-                        left: '-95px', // Shift left to account for rotation width/height swap
-                        top: '50%',
-                        transform: 'translateY(-50%) rotate(-90deg)',
+                        left: '40px',
+                        bottom: '20px',
+                        transformOrigin: 'left center',
+                        transform: 'rotate(-90deg)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        gap: '12px',
                         zIndex: 50,
-                        width: '250px',
-                        height: '40px'
+                        width: 'min(320px, 70vh)',
+                        height: '48px',
+                        padding: '0 16px',
+                        borderRadius: '99px',
+                        boxShadow: 'var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.8) inset',
+                        border: 'none', // Overriding glass-panel static border for soft inset look
+                        background: 'rgba(255, 255, 255, 0.6)'
                     }}>
+                        {/* Counter-rotate the icons to stay upright since the container is rotated -90deg */}
+                        <div style={{ transform: 'rotate(90deg)', display: 'flex', color: 'var(--text-muted)' }}>
+                            <Circle size={16} />
+                        </div>
                         <input
                             type="range"
                             min="0"
@@ -269,8 +289,11 @@ export default function Shangar() {
                             value={hues[activeCategory]}
                             onChange={(e) => setHues(prev => ({ ...prev, [activeCategory]: parseInt(e.target.value) }))}
                             className="rainbow-slider"
-                            style={{ '--thumb-color': `hsl(${hues[activeCategory]}, 100%, 50%)` }}
+                            style={{ '--thumb-color': `hsl(${hues[activeCategory]}, 100%, 50%)`, flex: 1 }}
                         />
+                        <div style={{ transform: 'rotate(90deg)', display: 'flex', color: 'var(--primary-color)' }}>
+                            <Palette size={20} />
+                        </div>
                     </div>
                 )}
                 {/* Real Murti Image */}
@@ -365,20 +388,20 @@ export default function Shangar() {
             {/* Wardrobe Controls */}
             <div className="glass-panel" style={{ flexShrink: 0, overflow: 'hidden' }}>
                 {/* Action Bar */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', padding: '12px', background: 'rgba(255,255,255,0.5)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                    <button onClick={undo} disabled={historyIndex === 0} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', border: 'none', background: 'white', borderRadius: '20px', color: historyIndex === 0 ? '#ccc' : 'var(--text-main)', cursor: historyIndex === 0 ? 'default' : 'pointer', boxShadow: 'var(--shadow-sm)', transition: 'all 0.2s' }}>
-                        <Undo2 size={16} /> <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>Undo</span>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
+                    <button onClick={undo} disabled={historyIndex === 0} className="btn" style={{ background: historyIndex === 0 ? 'rgba(255,255,255,0.4)' : 'white', color: historyIndex === 0 ? '#aaa' : 'var(--text-main)', boxShadow: historyIndex === 0 ? 'none' : 'var(--shadow-sm)' }}>
+                        <Undo2 size={16} /> <span>Undo</span>
                     </button>
-                    <button onClick={redo} disabled={historyIndex === history.length - 1} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', border: 'none', background: 'white', borderRadius: '20px', color: historyIndex === history.length - 1 ? '#ccc' : 'var(--text-main)', cursor: historyIndex === history.length - 1 ? 'default' : 'pointer', boxShadow: 'var(--shadow-sm)', transition: 'all 0.2s' }}>
-                        <Redo2 size={16} /> <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>Redo</span>
+                    <button onClick={redo} disabled={historyIndex === history.length - 1} className="btn" style={{ background: historyIndex === history.length - 1 ? 'rgba(255,255,255,0.4)' : 'white', color: historyIndex === history.length - 1 ? '#aaa' : 'var(--text-main)', boxShadow: historyIndex === history.length - 1 ? 'none' : 'var(--shadow-sm)' }}>
+                        <Redo2 size={16} /> <span>Redo</span>
                     </button>
-                    <button onClick={clearAll} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', border: 'none', background: '#FFF0F0', borderRadius: '20px', color: '#E53E3E', cursor: 'pointer', boxShadow: 'var(--shadow-sm)', transition: 'all 0.2s' }}>
-                        <Trash2 size={16} /> <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>Clear</span>
+                    <button onClick={clearAll} className="btn" style={{ background: '#FFF0F0', color: '#E53E3E', boxShadow: 'var(--shadow-sm)' }}>
+                        <Trash2 size={16} /> <span>Clear</span>
                     </button>
                 </div>
 
                 {/* Category Tabs */}
-                <div style={{ display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="scrollable-row" style={{ display: 'flex', gap: '8px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
                     {CATEGORIES.map(cat => {
                         const Icon = cat.icon;
                         const isActive = activeCategory === cat.id;
@@ -387,30 +410,33 @@ export default function Shangar() {
                                 key={cat.id}
                                 onClick={() => setActiveCategory(cat.id)}
                                 style={{
-                                    flex: 1,
-                                    padding: '12px',
-                                    background: isActive ? 'rgba(255,123,0,0.05)' : 'transparent',
-                                    border: 'none',
-                                    borderBottom: isActive ? '2px solid var(--primary-color)' : '2px solid transparent',
-                                    color: isActive ? 'var(--primary-color)' : 'var(--text-muted)',
+                                    flex: '0 0 auto',
+                                    minWidth: '90px',
+                                    padding: '10px 16px',
+                                    background: isActive ? 'linear-gradient(135deg, var(--primary-color), var(--secondary-color))' : 'rgba(255,255,255,0.5)',
+                                    color: isActive ? 'white' : 'var(--text-muted)',
+                                    borderRadius: '99px', // Pill shape
+                                    border: isActive ? 'none' : '1px solid rgba(255,255,255,0.6)',
+                                    boxShadow: isActive ? '0 4px 15px rgba(255, 94, 0, 0.3)' : 'none',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
-                                    gap: '4px',
+                                    gap: '6px',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                                    transform: isActive ? 'translateY(-2px)' : 'none'
                                 }}
                             >
-                                <Icon size={20} />
-                                <span style={{ fontSize: '0.75rem', fontWeight: isActive ? '600' : '400' }}>{cat.name}</span>
+                                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                                <span style={{ fontSize: '0.8rem', fontWeight: isActive ? '700' : '500', letterSpacing: '0.02em' }}>{cat.name}</span>
                             </button>
                         );
                     })}
                 </div>
 
                 {/* Items Grid */}
-                <div style={{ padding: '16px', display: 'flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                    <div style={{ display: 'flex', gap: '12px', margin: '0 auto' }}>
+                <div className="scrollable-row" style={{ padding: '20px 16px', display: 'flex' }}>
+                    <div style={{ display: 'flex', gap: '16px', margin: '0 auto' }}>
                         {ITEMS[activeCategory].map(item => {
                             const isEquipped = equipped[activeCategory]?.id === item.id;
                             return (
@@ -418,20 +444,20 @@ export default function Shangar() {
                                     key={item.id}
                                     onClick={() => equipItem(activeCategory, item)}
                                     style={{
-                                        minWidth: '80px',
-                                        height: '80px',
-                                        borderRadius: 'var(--border-radius-md)',
-                                        background: 'white',
-                                        border: isEquipped ? '2px solid var(--primary-color)' : '1px solid rgba(0,0,0,0.1)',
+                                        minWidth: '85px',
+                                        height: '85px',
+                                        borderRadius: 'var(--border-radius-lg)',
+                                        background: isEquipped ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)',
+                                        border: isEquipped ? '3px solid var(--primary-color)' : '1px solid rgba(255,255,255,0.8)',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         cursor: 'pointer',
-                                        boxShadow: isEquipped ? '0 4px 12px rgba(255,123,0,0.2)' : 'var(--shadow-sm)',
-                                        transform: isEquipped ? 'scale(1.05)' : 'scale(1)',
-                                        transition: 'all 0.2s',
-                                        padding: '8px'
+                                        boxShadow: isEquipped ? '0 8px 25px rgba(255,94,0,0.25)' : 'var(--shadow-sm)',
+                                        transform: isEquipped ? 'scale(1.08) translateY(-4px)' : 'scale(1)',
+                                        transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                                        padding: '10px'
                                     }}
                                 >
                                     {item.id === 'none' ? (

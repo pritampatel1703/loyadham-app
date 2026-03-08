@@ -192,6 +192,42 @@ h6 {
   }
 }
 
+/* Responsive Customization for Tablet/Desktop */
+@media (min-width: 768px) {
+  .controls-section {
+    width: 350px !important;
+  }
+}
+
+/* Abhishek Falling Animations */
+.abhishek-particle {
+  pointer-events: none;
+  animation-name: abhishekPhysicsFall;
+  animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes abhishekPhysicsFall {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+
+  10% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-50%, 400px) scale(0.5);
+    opacity: 0;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

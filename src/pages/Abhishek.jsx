@@ -68,6 +68,24 @@ export default function Abhishek() {
         }
     }, [particles]);
 
+    // Background Audio Loop Management
+    useEffect(() => {
+        // Initialize HTML5 Audio specifically for Abhishek
+        const abhishekAudio = new Audio('/abhishek/Abhishek.mp3');
+        abhishekAudio.loop = true;
+
+        // Attempt to auto-play (browsers may require interaction first, but since the user navigated here via a click it usually succeeds)
+        abhishekAudio.play().catch(error => {
+            console.warn("Auto-play prevented by browser policy. User interaction required:", error);
+        });
+
+        // Cleanup function: stop audio if the user navigates to another tab (e.g. Dashboard, Shangar)
+        return () => {
+            abhishekAudio.pause();
+            abhishekAudio.currentTime = 0;
+        };
+    }, []);
+
     // Handles the actual spawning of particles at the cursor location
     const spawnParticles = useCallback((x, y, category) => {
         const now = Date.now();

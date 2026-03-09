@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Droplet, Cookie, Flower2, Circle, Droplets, GlassWater, Hand, Trash2 } from 'lucide-react';
+import { Droplet, Cookie, Flower2, Circle, Droplets, GlassWater, Hand, Trash2, Loader2 } from 'lucide-react';
 
 // Unified Offerings following the Hari App flat category structure
 const CATEGORIES = [
@@ -34,6 +34,9 @@ export default function Abhishek() {
     const [pointerPos, setPointerPos] = useState({ x: 0, y: 0 });
     const [showTool, setShowTool] = useState(false);
 
+    // Image Preloader State
+    const [imagesLoaded, setImagesLoaded] = useState(false);
+
     // Mutable references for the continuous physics loop
     const pointerPosRef = useRef({ x: 0, y: 0 });
     const isInteractingRef = useRef(false);
@@ -45,6 +48,24 @@ export default function Abhishek() {
     useEffect(() => {
         const saved = localStorage.getItem('rajipo');
         if (saved) setRajipo(parseInt(saved, 10));
+    }, []);
+
+    // Preload heavy graphics to prevent staggered rendering
+    useEffect(() => {
+        const imagesToLoad = ['/abhishek/murti.png', '/abhishek/kalash.png', '/abhishek/basket.png'];
+        let loadedCount = 0;
+
+        const handleImageLoad = () => {
+            loadedCount++;
+            if (loadedCount === imagesToLoad.length) setImagesLoaded(true);
+        };
+
+        imagesToLoad.forEach(src => {
+            const img = new Image();
+            img.src = src;
+            img.onload = handleImageLoad;
+            img.onerror = handleImageLoad; // Don't block screen forever if one fails
+        });
     }, []);
 
     // Initialize activeSubItem if the initial activeCategory has options
@@ -268,6 +289,16 @@ export default function Abhishek() {
 
         return () => cancelAnimationFrame(animationFrameId);
     }, [activeCategory, spawnParticles]);
+
+    // Show beautiful loading screen while high-res images are downloading into memory
+    if (!imagesLoaded) {
+        return (
+            <div className="page-loader-overlay">
+                <Loader2 className="spinner-icon" size={48} color="var(--primary-color)" />
+                <span className="text-gradient" style={{ fontSize: '1.2rem', fontWeight: '600' }}>Preparing Sacred Abhishek...</span>
+            </div>
+        );
+    }
 
     return (
         <div className="page-container shangar-layout" style={{ animation: 'fadeIn 0.4s ease-out' }}>

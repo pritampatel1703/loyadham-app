@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Shirt, Circle, Flower2, Sparkles, Hand, Undo2, Redo2, Trash2, XCircle, Download, Palette } from 'lucide-react';
+import { Shirt, Circle, Flower2, Sparkles, Hand, Undo2, Redo2, Trash2, XCircle, Download, Palette, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import download from 'downloadjs';
 
@@ -107,6 +107,34 @@ export default function Shangar() {
     const [history, setHistory] = useState([equipped]); // Initialize history with initial equipped state
     const [historyIndex, setHistoryIndex] = useState(0);
     const [rajipoEarned, setRajipoEarned] = useState(false);
+    const [imagesLoaded, setImagesLoaded] = useState(false);
+
+    // Preload heavy Swaroop geometries depending on current state to stop staggered visual popping
+    useEffect(() => {
+        const imagesToLoad = selectedMurti
+            ? [selectedMurti.image]
+            : ITEMS.murti.map(m => m.image);
+
+        if (imagesToLoad.length === 0) {
+            setImagesLoaded(true);
+            return;
+        }
+
+        setImagesLoaded(false);
+        let loadedCount = 0;
+
+        const handleLoad = () => {
+            loadedCount++;
+            if (loadedCount === imagesToLoad.length) setImagesLoaded(true);
+        };
+
+        imagesToLoad.forEach(src => {
+            const img = new Image();
+            img.src = src;
+            img.onload = handleLoad;
+            img.onerror = handleLoad; // Skip broken images so we don't block forever
+        });
+    }, [selectedMurti]);
 
     // Save state to local storage whenever it changes
     useEffect(() => {
@@ -184,6 +212,16 @@ export default function Shangar() {
                 });
         }, 100);
     };
+
+    // Block rendering sequence if heavy textures haven't cached into browser memory
+    if (!imagesLoaded) {
+        return (
+            <div className="page-loader-overlay">
+                <Loader2 className="spinner-icon" size={48} color="var(--primary-color)" />
+                <span className="text-gradient" style={{ fontSize: '1.2rem', fontWeight: '600' }}>Preparing Sacred Darshan...</span>
+            </div>
+        );
+    }
 
     // If no murti is selected and there are multiple options, show selection screen
     if (!selectedMurti && ITEMS.murti.length > 0) {

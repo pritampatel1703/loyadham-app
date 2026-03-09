@@ -1,25 +1,62 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Droplet, Cookie, Flower2, Circle, Droplets, GlassWater, Hand, Trash2, Loader2 } from 'lucide-react';
 
+// Format names from file paths (e.g., 'rose_flower.png' -> 'Rose Flower')
+const formatName = (fileName) => {
+    return fileName.split('.')[0]
+        .replace(/[_:-]/g, ' ')
+        .replace(/preview|actual/gi, '')
+        .trim()
+        .replace(/\b\w/g, l => l.toUpperCase());
+};
+
+// Scan public/abhishek folders for dynamic items
+const filePaths = Object.keys(import.meta.glob('/public/abhishek/**/*.{png,jpg,jpeg,svg}', { eager: true }));
+
+const OFFERING_ITEMS = {
+    flower: [],
+    dryfruit: [],
+    moti: []
+};
+
+filePaths.forEach((path) => {
+    const cleanPath = path.replace('/public', '');
+    const parts = cleanPath.split('/').filter(Boolean);
+    // Parts example: ['abhishek', 'flower', 'preview', 'rose.png']
+
+    if (parts.length >= 4 && parts[0] === 'abhishek') {
+        const folder = parts[1].replace(' ', ''); // 'dry fruit' -> 'dryfruit'
+        const categoryId = folder === 'flower' ? 'flower' : folder === 'dryfruit' ? 'dryfruit' : folder === 'moti' ? 'moti' : null;
+
+        if (categoryId && OFFERING_ITEMS[categoryId]) {
+            const subfolder = parts[2]; // 'preview' or 'actual'
+            const fileName = parts[3];
+
+            if (subfolder === 'preview' || subfolder === 'actual') {
+                const baseName = fileName.split('.')[0].replace(/preview|actual/gi, '').trim();
+                const id = `${categoryId}_${baseName.toLowerCase().replace(/\s+/g, '_')}`;
+
+                let item = OFFERING_ITEMS[categoryId].find(i => i.id === id);
+                if (!item) {
+                    item = { id, name: formatName(fileName) };
+                    OFFERING_ITEMS[categoryId].push(item);
+                }
+
+                if (subfolder === 'preview') item.preview = cleanPath;
+                if (subfolder === 'actual') item.actual = cleanPath;
+            }
+        }
+    }
+});
+
 // Unified Offerings following the Hari App flat category structure
 const CATEGORIES = [
     { id: 'jal', name: 'Jal', tool: 'kalash', color: '#A0E6FF', icon: Droplet, type: 'liquid' },
     { id: 'milk', name: 'Dugdha', tool: 'kalash', color: '#FFFFFF', icon: Droplets, type: 'liquid' },
     { id: 'juice', name: 'Juice', tool: 'kalash', color: '#E53E3E', icon: Droplets, type: 'liquid' },
-    { id: 'dryfruit', name: 'Dry Fruits', tool: 'basket', color: '#B7791F', icon: Cookie, type: 'solid' },
-    {
-        id: 'flower',
-        name: 'Pushpa',
-        tool: 'basket',
-        color: '#D53F8C',
-        icon: Flower2,
-        type: 'solid',
-        options: [
-            { id: 'rose', name: 'Rose', preview: '/abhishek/flower/preview/rose preview.png', actual: '/abhishek/flower/actual/rose.png' },
-            { id: 'anemone', name: 'Anemone', preview: '/abhishek/flower/preview/anemone preview.png', actual: '/abhishek/flower/actual/anemone.png' }
-        ]
-    },
-    { id: 'moti', name: 'Moti', tool: 'basket', color: '#E2E8F0', icon: Circle, type: 'solid' }
+    { id: 'dryfruit', name: 'Dry Fruits', tool: 'basket', color: '#B7791F', icon: Cookie, type: 'solid', options: OFFERING_ITEMS.dryfruit },
+    { id: 'flower', name: 'Pushpa', tool: 'basket', color: '#D53F8C', icon: Flower2, type: 'solid', options: OFFERING_ITEMS.flower },
+    { id: 'moti', name: 'Moti', tool: 'basket', color: '#E2E8F0', icon: Circle, type: 'solid', options: OFFERING_ITEMS.moti }
 ];
 
 export default function Abhishek() {
@@ -77,6 +114,26 @@ export default function Abhishek() {
         }
     }, [activeCategory]);
 
+    // --- Aggressive Mobile Zoom & Scroll Prevention ---
+    // Apple iOS Safari frequently ignores CSS touch-action: none. We must kill the gesture at the DOM level.
+    useEffect(() => {
+        const preventNativeGestures = (e) => {
+            if (canvasRef.current && canvasRef.current.contains(e.target)) {
+                // If it's a multi-touch (pinch-to-zoom) or single touch (scroll), kill it.
+                if (e.touches.length > 1 || e.type === 'touchmove') {
+                    e.preventDefault();
+                }
+            }
+        };
+
+        // { passive: false } allows us to manually call preventDefault on scroll/zoom events
+        document.addEventListener('touchmove', preventNativeGestures, { passive: false });
+
+        return () => {
+            document.removeEventListener('touchmove', preventNativeGestures);
+        };
+    }, []);
+
 
     // Memory Management: Clear dead particles automatically
     useEffect(() => {
@@ -108,7 +165,7 @@ export default function Abhishek() {
     }, []);
 
     // Handles the actual spawning of particles at the cursor location
-    const spawnParticles = useCallback((x, y, category) => {
+    const spawnParticles = useCallback((x, y, category, toolVx = 0, toolVy = 0) => {
         const now = Date.now();
         const isLiquid = category.type === 'liquid';
 
@@ -117,8 +174,8 @@ export default function Abhishek() {
             // Drop more solids by reducing throttle from 150 to 80
             if (now - lastSpawnTime.current < 80) return;
         } else {
-            // Slight throttle to prevent exponential lag, but fast enough for stream
-            if (now - lastSpawnTime.current < 20) return;
+            // Liquids spawn rapidly for a cohesive stream, throttled slightly for performance constraints
+            if (now - lastSpawnTime.current < 35) return;
         }
 
         lastSpawnTime.current = now;
@@ -132,16 +189,19 @@ export default function Abhishek() {
             resolvedImage = category.images[Math.floor(Math.random() * category.images.length)];
         }
 
-        const count = isLiquid ? Math.floor(Math.random() * 3 + 3) : 1;
+        // Spawn dense droplets for liquids, single particles for solids
+        const count = isLiquid ? Math.floor(Math.random() * 2 + 1) : 1;
 
         const newParticles = Array.from({ length: count }).map(() => {
-            const spread = isLiquid ? 6 : 40;
+            const spread = isLiquid ? 12 : 40;
             const offsetX = (Math.random() - 0.5) * spread;
             const offsetY = (Math.random() - 0.5) * spread;
 
-            const size = isLiquid ? Math.random() * 6 + 8 : Math.random() * 15 + 10;
-            const vx = isLiquid ? (Math.random() - 0.5) * 1.5 : (Math.random() - 0.5) * 6;
-            const vy = isLiquid ? Math.random() * 2 : Math.random() * 2 + 1;
+            const size = isLiquid ? Math.random() * 6 + 6 : Math.random() * 15 + 10;
+
+            // Inherit Kalash velocity for realistic arcing water
+            const vx = isLiquid ? (Math.random() - 0.5) * 1.5 + (toolVx * 0.15) : (Math.random() - 0.5) * 6;
+            const vy = isLiquid ? Math.random() * 2 + (toolVy * 0.1) : Math.random() * 2 + 1;
 
             return {
                 id: Math.random().toString(36).substr(2, 9),
@@ -154,12 +214,13 @@ export default function Abhishek() {
                 size: size,
                 type: category.type,
                 life: 1.0,
-                birthTime: now
+                birthTime: now,
+                layerZIndex: Math.random() > 0.5 ? 20 : 5 // Render randomly in front of or behind the Murti
             };
         });
 
         // Massively increase particle cap to allow continuous streams
-        setParticles(prev => [...prev, ...newParticles].slice(-400));
+        setParticles(prev => [...prev, ...newParticles].slice(-250)); // Capped lower for performance
 
         // Add 1 accumulation at the floor randomly
         setAccumulations(prev => {
@@ -171,7 +232,8 @@ export default function Abhishek() {
                 size: category.type === 'liquid' ? Math.random() * 40 + 20 : Math.random() * 15 + 10,
                 color: category.color,
                 image: resolvedImage,
-                type: category.type
+                type: category.type,
+                layerZIndex: Math.random() > 0.5 ? 15 : 1 // Drop behind (1) or in front of (15) the Murti
             };
             return [...prev, newAcc].slice(-40); // Cap floor items
         });
@@ -235,16 +297,27 @@ export default function Abhishek() {
         const TERMINAL_VELOCITY = 15;
         const FLOOR_Y = canvasRef.current ? canvasRef.current.clientHeight - 40 : 800; // Approximate floor line
 
+        let lastToolPos = { ...pointerPosRef.current };
+
         const loop = () => {
+            const currentPos = pointerPosRef.current;
+            const toolVx = isInteractingRef.current ? currentPos.x - lastToolPos.x : 0;
+            const toolVy = isInteractingRef.current ? currentPos.y - lastToolPos.y : 0;
+            lastToolPos = { ...currentPos };
+
             // 1. Spawning
             if (isInteractingRef.current) {
-                const { x, y } = pointerPosRef.current;
+                const { x, y } = currentPos;
 
                 // When rotated -35deg, the spout/opening is positioned toward the top-left of the center point
                 const spawnYOffset = -25;
                 const spawnXOffset = -35;
 
-                spawnParticles(x + spawnXOffset, y + spawnYOffset, activeCategory);
+                const startX = x + spawnXOffset;
+                const startY = y + spawnYOffset;
+
+                // Spawning
+                spawnParticles(startX, startY, activeCategory, toolVx, toolVy);
             }
 
             // 2. Physics Update Step
@@ -267,7 +340,29 @@ export default function Abhishek() {
 
                     let newX = p.x + newVx;
                     let newY = p.y + newVy;
-                    let newLife = p.life - 0.012; // Slower fade for distinct streams
+
+                    // --- Lightweight Murti Surface Collision ---
+                    // The Murti container is centrally aligned with a maxWidth of 380px.
+                    // So the body spans approximately +180px and -180px from the exact screen center.
+                    const centerX = window.innerWidth / 2;
+                    const bodyLeft = centerX - 160;   // Slight inset to account for Murti's arm gaps
+                    const bodyRight = centerX + 160;
+
+                    const isOverMurti = p.type === 'liquid' &&
+                        newX > bodyLeft &&
+                        newX < bodyRight &&
+                        newY > window.innerHeight * 0.15 &&
+                        newY < window.innerHeight * 0.75;
+
+                    if (isOverMurti) {
+                        // Apply surface friction / viscosity
+                        newVy = newVy * 0.55; // Huge gravity dampening (water slides instead of falls)
+                        newVx = newVx * 0.85; // Slow horizontal speed
+                        newY = p.y + newVy;
+                        newX = p.x + newVx;
+                    }
+
+                    let newLife = p.life - (isOverMurti ? 0.006 : 0.012); // Slower fade on body
 
 
                     // Floor Collision & Bounce
@@ -301,7 +396,7 @@ export default function Abhishek() {
     }
 
     return (
-        <div className="page-container shangar-layout" style={{ animation: 'fadeIn 0.4s ease-out' }}>
+        <div className="page-container shangar-layout" style={{ animation: 'fadeIn 0.4s ease-out', touchAction: 'none', overscrollBehavior: 'none' }}>
             {/* Header */}
             <header style={{ padding: '24px 24px 12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                 <div>
@@ -360,10 +455,10 @@ export default function Abhishek() {
 
                             {/* Background Splashes (Behind Murti) */}
                             {accumulations.filter(a => a.type === 'liquid').map((acc) => (
-                                <div key={acc.id} style={{
+                                <div key={acc.id} className="accumulation" style={{
                                     position: 'absolute', left: acc.left, bottom: acc.bottom,
                                     width: `${acc.size}px`, height: `${acc.size * 0.4}px`, borderRadius: '50%',
-                                    background: acc.color, opacity: 0.5, zIndex: 1, filter: 'blur(3px)'
+                                    background: acc.color, opacity: 0.6, zIndex: acc.layerZIndex, filter: 'blur(4px)'
                                 }} />
                             ))}
 
@@ -392,35 +487,39 @@ export default function Abhishek() {
                             />
 
                             {/* Foreground Deposits (In front of Murti) */}
-                            {accumulations.filter(a => a.type === 'solid').map((acc) => (
-                                <div key={acc.id} style={{
-                                    position: 'absolute', left: acc.left, bottom: acc.bottom,
-                                    width: `${acc.size}px`, height: `${acc.size}px`,
-                                    background: acc.image ? `url(${acc.image}) center/contain no-repeat` : acc.color,
-                                    borderRadius: acc.image ? '0' : '30%',
-                                    opacity: 0.9, zIndex: 15,
-                                    transform: acc.image ? 'none' : `rotate(${Math.random() * 360}deg)`,
-                                    boxShadow: acc.image ? 'none' : 'inset -2px -2px 4px rgba(0,0,0,0.2)'
-                                }} />
+                            {accumulations.map((acc) => (
+                                acc.layerZIndex > 10 && (
+                                    <div key={acc.id} className="accumulation" style={{
+                                        position: 'absolute', left: acc.left, bottom: acc.bottom,
+                                        width: `${acc.size}px`, height: acc.type === 'liquid' ? `${acc.size * 0.4}px` : `${acc.size}px`,
+                                        background: acc.image ? `url("${encodeURI(acc.image)}") center/contain no-repeat` : acc.color,
+                                        borderRadius: acc.image ? '0' : (acc.type === 'liquid' ? '50%' : '30%'),
+                                        opacity: acc.type === 'liquid' ? 0.6 : 0.9,
+                                        zIndex: acc.layerZIndex,
+                                        filter: acc.type === 'liquid' ? 'blur(4px)' : 'none',
+                                        transform: acc.image || acc.type === 'liquid' ? 'none' : `rotate(${Math.random() * 360}deg)`,
+                                        boxShadow: acc.image || acc.type === 'liquid' ? 'none' : 'inset -2px -2px 4px rgba(0,0,0,0.2)'
+                                    }} />
+                                )
                             ))}
                         </div>
 
                         {/* Active Physics Particles */}
                         {particles.map((p) => (
-                            <div key={p.id} style={{
+                            <div key={p.id} className="particle" style={{
                                 position: 'absolute',
                                 left: 0,
                                 top: 0,
                                 transform: `translate(${p.x}px, ${p.y}px)`,
                                 width: `${p.size}px`,
-                                height: `${p.size}px`,
-                                background: p.image ? `url(${p.image}) center/contain no-repeat` : p.color,
-                                borderRadius: p.image ? '0' : (p.type === 'liquid' ? '50%' : '20%'),
+                                height: p.type === 'liquid' ? `${p.size + p.vy * 1.5}px` : `${p.size}px`,
+                                background: p.image ? `url("${encodeURI(p.image)}") center/contain no-repeat` : p.color,
+                                borderRadius: p.image ? '0' : (p.type === 'liquid' ? '50% 50% 40% 40%' : '20%'),
                                 opacity: Math.max(0, p.life),
                                 pointerEvents: 'none',
-                                zIndex: 20,
-                                willChange: 'transform, opacity',
-                                boxShadow: p.image ? 'none' : (p.type === 'liquid' ? 'inset -1px -1px 3px rgba(0,0,0,0.1)' : 'inset -2px -2px 4px rgba(0,0,0,0.2)')
+                                zIndex: p.layerZIndex,
+                                willChange: 'transform, opacity, height',
+                                boxShadow: p.image ? 'none' : 'inset -2px -2px 4px rgba(0,0,0,0.2)'
                             }} />
                         ))}
 
@@ -472,8 +571,8 @@ export default function Abhishek() {
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Select an item to offer.</p>
                     </div>
 
-                    {/* Sub-Menu for Categories with strict options (e.g. Flowers) */}
-                    {activeCategory.options && (
+                    {/* Sub-Menu for Categories with dynamic options (e.g. Flowers, Dry Fruits) */}
+                    {activeCategory.options && activeCategory.options.length > 0 && (
                         <div className="scrollable-row" style={{ display: 'flex', gap: '12px', padding: '16px', background: 'rgba(255,255,255,0.6)', borderBottom: '1px solid rgba(0,0,0,0.05)', overflowX: 'auto' }}>
                             {activeCategory.options.map(opt => {
                                 const isSubActive = activeSubItem === opt.id;

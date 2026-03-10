@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, Trophy } from 'lucide-react';
 
-// Using simple emojis as placeholders for Prasadi items until the high-res images are available
-const ITEMS = ['📿', '🕉️', '👑', '🦶', '🌷', '📖'];
+// Dynamically load all game images from the public folder
+const rawImages = import.meta.glob('/public/games/smurti game/*.{png,jpg,jpeg,webp}', { eager: true });
+const GAME_IMAGES = Object.keys(rawImages).map(path => path.replace('/public', ''));
+
+// Fallback emojis in case the images folder is empty
+const FALLBACK_ITEMS = ['📿', '🕉️', '👑', '🦶', '🌷', '📖'];
 
 export default function Smruti() {
     const [cards, setCards] = useState([]);
@@ -14,10 +18,19 @@ export default function Smruti() {
 
     // Initialize game
     const initializeGame = () => {
-        const duplicatedItems = [...ITEMS, ...ITEMS];
+        let selectedItems = [];
+        if (GAME_IMAGES.length >= 6) {
+            // Pick a random 6 images for this session
+            const shuffledImages = [...GAME_IMAGES].sort(() => Math.random() - 0.5);
+            selectedItems = shuffledImages.slice(0, 6);
+        } else {
+            selectedItems = FALLBACK_ITEMS;
+        }
+
+        const duplicatedItems = [...selectedItems, ...selectedItems];
         const shuffled = duplicatedItems
             .sort(() => Math.random() - 0.5)
-            .map((item, index) => ({ id: index, item, isFlipped: false, isMatched: false }));
+            .map((item, index) => ({ id: index, item, isFlipped: false, isMatched: false, isImage: GAME_IMAGES.length >= 6 }));
 
         setCards(shuffled);
         setFlippedIndices([]);
@@ -56,7 +69,7 @@ export default function Smruti() {
                     setFlippedIndices([]);
                     setMatchedPairs(prev => {
                         const newCount = prev + 1;
-                        if (newCount === ITEMS.length) {
+                        if (newCount === 6) { // 6 pairs to win
                             setGameWon(true);
                             setRajipoEarned(100 - Math.min(moves * 2, 50)); // Base Rajipo based on moves
                         }
@@ -80,8 +93,8 @@ export default function Smruti() {
         <div className="smruti-container">
             <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h1 className="text-gradient" style={{ fontSize: '1.8rem', marginBottom: '4px' }}>Smruti Game</h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Match Prasadi items to earn Rajipo</p>
+                    <h1 className="text-gradient" style={{ fontSize: '1.8rem', marginBottom: '4px' }}>Games</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Play Memory Game to earn Rajipo</p>
                 </div>
                 <button className="btn btn-secondary" onClick={initializeGame} style={{ padding: '8px 12px', borderRadius: '12px' }}>
                     <RefreshCw size={18} />
@@ -97,7 +110,7 @@ export default function Smruti() {
                 <div style={{ width: '1px', height: '30px', background: 'rgba(0,0,0,0.1)' }}></div>
                 <div style={{ textAlign: 'center' }}>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Found</p>
-                    <p style={{ fontSize: '1.2rem', fontWeight: '700', color: 'var(--primary-color)' }}>{matchedPairs} / {ITEMS.length}</p>
+                    <p style={{ fontSize: '1.2rem', fontWeight: '700', color: 'var(--primary-color)' }}>{matchedPairs} / 6</p>
                 </div>
             </div>
 
@@ -153,9 +166,14 @@ export default function Smruti() {
                             fontSize: '2.5rem',
                             borderRadius: 'var(--border-radius-md)',
                             boxShadow: card.isMatched ? '0 0 15px rgba(255,123,0,0.2)' : 'var(--shadow-sm)',
-                            opacity: card.isMatched ? 0.7 : 1
+                            opacity: card.isMatched ? 0.7 : 1,
+                            overflow: 'hidden'
                         }}>
-                            {card.item}
+                            {card.isImage ? (
+                                <img src={card.item} alt="memory card" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+                            ) : (
+                                card.item
+                            )}
                         </div>
                     </div>
                 ))}

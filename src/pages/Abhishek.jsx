@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Droplet, Cookie, Flower2, Circle, Droplets, GlassWater, Hand, Trash2, Loader2 } from 'lucide-react';
+import { Droplet, Cookie, Flower2, Circle, Droplets, GlassWater, Hand, Trash2 } from 'lucide-react';
 
-// Format names from file paths (e.g., 'rose_flower.png' -> 'Rose Flower')
+// Unified Offerings following the Hari App flat category structure
+const filePaths = Object.keys(import.meta.glob('/public/abhishek/**/*.{png,jpg,jpeg,svg}', { eager: true }));
+
 const formatName = (fileName) => {
     return fileName.split('.')[0]
+        .replace(/preview|actual/i, '')
         .replace(/[_:-]/g, ' ')
-        .replace(/preview|actual/gi, '')
         .trim()
         .replace(/\b\w/g, l => l.toUpperCase());
 };
-
-// Scan public/abhishek folders for dynamic items
-const filePaths = Object.keys(import.meta.glob('/public/abhishek/**/*.{png,jpg,jpeg,svg}', { eager: true }));
 
 const OFFERING_ITEMS = {
     flower: [],
@@ -19,41 +18,56 @@ const OFFERING_ITEMS = {
     moti: []
 };
 
+// Populate OFFERING_ITEMS from the filesystem
 filePaths.forEach((path) => {
     const cleanPath = path.replace('/public', '');
     const parts = cleanPath.split('/').filter(Boolean);
-    // Parts example: ['abhishek', 'flower', 'preview', 'rose.png']
 
     if (parts.length >= 4 && parts[0] === 'abhishek') {
-        const folder = parts[1].replace(' ', ''); // 'dry fruit' -> 'dryfruit'
-        const categoryId = folder === 'flower' ? 'flower' : folder === 'dryfruit' ? 'dryfruit' : folder === 'moti' ? 'moti' : null;
+        const category = parts[1].replace(/\s+/g, ''); // flower, dryfruit, moti
 
-        if (categoryId && OFFERING_ITEMS[categoryId]) {
-            const subfolder = parts[2]; // 'preview' or 'actual'
+        if (OFFERING_ITEMS[category]) {
+            const subfolder = parts[2]; // preview or actual
             const fileName = parts[3];
 
             if (subfolder === 'preview' || subfolder === 'actual') {
-                const baseName = fileName.split('.')[0].replace(/preview|actual/gi, '').trim();
-                const id = `${categoryId}_${baseName.toLowerCase().replace(/\s+/g, '_')}`;
+                const baseId = formatName(fileName).toLowerCase().replace(/\s+/g, '_');
 
-                let item = OFFERING_ITEMS[categoryId].find(i => i.id === id);
-                if (!item) {
-                    item = { id, name: formatName(fileName) };
-                    OFFERING_ITEMS[categoryId].push(item);
+                let existingItem = OFFERING_ITEMS[category].find(i => i.id === baseId);
+                if (!existingItem) {
+                    existingItem = { id: baseId, name: formatName(fileName) };
+                    OFFERING_ITEMS[category].push(existingItem);
                 }
 
-                if (subfolder === 'preview') item.preview = cleanPath;
-                if (subfolder === 'actual') item.actual = cleanPath;
+                existingItem[subfolder] = cleanPath;
             }
         }
     }
 });
 
-// Unified Offerings following the Hari App flat category structure
 const CATEGORIES = [
-    { id: 'jal', name: 'Jal', tool: 'kalash', color: '#A0E6FF', icon: Droplet, type: 'liquid' },
-    { id: 'milk', name: 'Dugdha', tool: 'kalash', color: '#FFFFFF', icon: Droplets, type: 'liquid' },
-    { id: 'juice', name: 'Juice', tool: 'kalash', color: '#E53E3E', icon: Droplets, type: 'liquid' },
+    {
+        id: 'jal', name: 'Jal', tool: 'kalash', color: '#A0E6FF', icon: Droplet, type: 'liquid', options: [
+            { id: 'jal_plain', name: 'Jal', color: '#A0E6FF' },
+            { id: 'keshar_jal', name: 'Keshar Jal', color: '#FFB84D' }
+        ]
+    },
+    {
+        id: 'milk', name: 'Dugdha', tool: 'kalash', color: '#FFFFFF', icon: Droplets, type: 'liquid', options: [
+            { id: 'milk_plain', name: 'Plain', color: '#FFFFFF' },
+            { id: 'kesar_milk', name: 'Kesar', color: '#FCD34D' },
+            { id: 'rose_milk', name: 'Rose', color: '#F472B6' },
+            { id: 'elaichi_milk', name: 'Elaichi', color: '#A7F3D0' }
+        ]
+    },
+    {
+        id: 'juice', name: 'Juice', tool: 'kalash', color: '#ECC94B', icon: GlassWater, type: 'liquid', options: [
+            { id: 'mango_juice', name: 'Mango', color: '#ECC94B' },
+            { id: 'orange_juice', name: 'Orange', color: '#F6AD55' },
+            { id: 'sugarcane_juice', name: 'Sugarcane', color: '#C6F6D5' },
+            { id: 'pomegranate_juice', name: 'Pomegranate', color: '#b62222ff' },
+        ]
+    },
     { id: 'dryfruit', name: 'Dry Fruits', tool: 'basket', color: '#B7791F', icon: Cookie, type: 'solid', options: OFFERING_ITEMS.dryfruit },
     { id: 'flower', name: 'Pushpa', tool: 'basket', color: '#D53F8C', icon: Flower2, type: 'solid', options: OFFERING_ITEMS.flower },
     { id: 'moti', name: 'Moti', tool: 'basket', color: '#E2E8F0', icon: Circle, type: 'solid', options: OFFERING_ITEMS.moti }
@@ -71,9 +85,6 @@ export default function Abhishek() {
     const [pointerPos, setPointerPos] = useState({ x: 0, y: 0 });
     const [showTool, setShowTool] = useState(false);
 
-    // Image Preloader State
-    const [imagesLoaded, setImagesLoaded] = useState(false);
-
     // Mutable references for the continuous physics loop
     const pointerPosRef = useRef({ x: 0, y: 0 });
     const isInteractingRef = useRef(false);
@@ -87,24 +98,6 @@ export default function Abhishek() {
         if (saved) setRajipo(parseInt(saved, 10));
     }, []);
 
-    // Preload heavy graphics to prevent staggered rendering
-    useEffect(() => {
-        const imagesToLoad = ['/abhishek/murti.png', '/abhishek/kalash.png', '/abhishek/basket.png'];
-        let loadedCount = 0;
-
-        const handleImageLoad = () => {
-            loadedCount++;
-            if (loadedCount === imagesToLoad.length) setImagesLoaded(true);
-        };
-
-        imagesToLoad.forEach(src => {
-            const img = new Image();
-            img.src = src;
-            img.onload = handleImageLoad;
-            img.onerror = handleImageLoad; // Don't block screen forever if one fails
-        });
-    }, []);
-
     // Initialize activeSubItem if the initial activeCategory has options
     useEffect(() => {
         if (activeCategory.options && activeCategory.options.length > 0) {
@@ -113,26 +106,6 @@ export default function Abhishek() {
             setActiveSubItem(null);
         }
     }, [activeCategory]);
-
-    // --- Aggressive Mobile Zoom & Scroll Prevention ---
-    // Apple iOS Safari frequently ignores CSS touch-action: none. We must kill the gesture at the DOM level.
-    useEffect(() => {
-        const preventNativeGestures = (e) => {
-            if (canvasRef.current && canvasRef.current.contains(e.target)) {
-                // If it's a multi-touch (pinch-to-zoom) or single touch (scroll), kill it.
-                if (e.touches.length > 1 || e.type === 'touchmove') {
-                    e.preventDefault();
-                }
-            }
-        };
-
-        // { passive: false } allows us to manually call preventDefault on scroll/zoom events
-        document.addEventListener('touchmove', preventNativeGestures, { passive: false });
-
-        return () => {
-            document.removeEventListener('touchmove', preventNativeGestures);
-        };
-    }, []);
 
 
     // Memory Management: Clear dead particles automatically
@@ -146,62 +119,46 @@ export default function Abhishek() {
         }
     }, [particles]);
 
-    // Background Audio Loop Management
-    useEffect(() => {
-        // Initialize HTML5 Audio specifically for Abhishek
-        const abhishekAudio = new Audio('/abhishek/Abhishek.mp3');
-        abhishekAudio.loop = true;
-
-        // Attempt to auto-play (browsers may require interaction first, but since the user navigated here via a click it usually succeeds)
-        abhishekAudio.play().catch(error => {
-            console.warn("Auto-play prevented by browser policy. User interaction required:", error);
-        });
-
-        // Cleanup function: stop audio if the user navigates to another tab (e.g. Dashboard, Shangar)
-        return () => {
-            abhishekAudio.pause();
-            abhishekAudio.currentTime = 0;
-        };
-    }, []);
-
     // Handles the actual spawning of particles at the cursor location
-    const spawnParticles = useCallback((x, y, category, toolVx = 0, toolVy = 0) => {
+    const spawnParticles = useCallback((x, y, category) => {
         const now = Date.now();
         const isLiquid = category.type === 'liquid';
 
         // Solids need throttling so they don't spawn 60 per second. Liquids need high density for a stream.
         if (!isLiquid) {
-            // Drop more solids by reducing throttle from 150 to 80
-            if (now - lastSpawnTime.current < 80) return;
+            // Drop more solids by reducing throttle from 80 to 40
+            if (now - lastSpawnTime.current < 40) return;
         } else {
-            // Liquids spawn rapidly for a cohesive stream, throttled slightly for performance constraints
-            if (now - lastSpawnTime.current < 35) return;
+            // Slight throttle to prevent exponential lag, but fast enough for stream (reduced from 15 to 25 to lower quantity)
+            if (now - lastSpawnTime.current < 25) return;
         }
 
         lastSpawnTime.current = now;
 
-        // Determine particle image based on active category and sub-selection ONCE per spawn block
         let resolvedImage = null;
+        let resolvedColor = category.color;
+
         if (category.options && activeSubItem) {
             const selectedOpt = category.options.find(opt => opt.id === activeSubItem);
-            if (selectedOpt) resolvedImage = selectedOpt.actual;
+            if (selectedOpt) {
+                resolvedImage = selectedOpt.actual;
+                if (selectedOpt.color) resolvedColor = selectedOpt.color;
+            }
         } else if (category.images) {
             resolvedImage = category.images[Math.floor(Math.random() * category.images.length)];
         }
 
-        // Spawn dense droplets for liquids, single particles for solids
-        const count = isLiquid ? Math.floor(Math.random() * 2 + 1) : 1;
+        // Reduced liquid count to prevent it from looking too overwhelmingly large/dense
+        const count = isLiquid ? Math.floor(Math.random() * 3 + 2) : Math.floor(Math.random() * 2 + 1);
 
         const newParticles = Array.from({ length: count }).map(() => {
-            const spread = isLiquid ? 12 : 40;
+            const spread = isLiquid ? 6 : 40;
             const offsetX = (Math.random() - 0.5) * spread;
             const offsetY = (Math.random() - 0.5) * spread;
 
-            const size = isLiquid ? Math.random() * 6 + 6 : Math.random() * 15 + 10;
-
-            // Inherit Kalash velocity for realistic arcing water
-            const vx = isLiquid ? (Math.random() - 0.5) * 1.5 + (toolVx * 0.15) : (Math.random() - 0.5) * 6;
-            const vy = isLiquid ? Math.random() * 2 + (toolVy * 0.1) : Math.random() * 2 + 1;
+            const size = isLiquid ? Math.random() * 6 + 8 : Math.random() * 15 + 10;
+            const vx = isLiquid ? (Math.random() - 0.5) * 1.5 : (Math.random() - 0.5) * 6;
+            const vy = isLiquid ? Math.random() * 2 : Math.random() * 2 + 1;
 
             return {
                 id: Math.random().toString(36).substr(2, 9),
@@ -209,18 +166,18 @@ export default function Abhishek() {
                 y: y + offsetY,
                 vx: vx,
                 vy: vy,
-                color: category.color,
+                color: resolvedColor,
                 image: resolvedImage,
                 size: size,
                 type: category.type,
+                layerZIndex: Math.random() > 0.3 ? 20 : 5, // 70% in front, 30% behind
                 life: 1.0,
-                birthTime: now,
-                layerZIndex: Math.random() > 0.5 ? 20 : 5 // Render randomly in front of or behind the Murti
+                birthTime: now
             };
         });
 
         // Massively increase particle cap to allow continuous streams
-        setParticles(prev => [...prev, ...newParticles].slice(-250)); // Capped lower for performance
+        setParticles(prev => [...prev, ...newParticles].slice(-800));
 
         // Add 1 accumulation at the floor randomly
         setAccumulations(prev => {
@@ -230,10 +187,10 @@ export default function Abhishek() {
                 left: `${Math.random() * 80 + 10}%`,
                 bottom: `${Math.random() * 15}%`,
                 size: category.type === 'liquid' ? Math.random() * 40 + 20 : Math.random() * 15 + 10,
-                color: category.color,
+                color: resolvedColor,
                 image: resolvedImage,
                 type: category.type,
-                layerZIndex: Math.random() > 0.5 ? 15 : 1 // Drop behind (1) or in front of (15) the Murti
+                layerZIndex: Math.random() > 0.5 ? 15 : 5 // 50/50 mix on the floor
             };
             return [...prev, newAcc].slice(-40); // Cap floor items
         });
@@ -293,31 +250,20 @@ export default function Abhishek() {
     // Physics Engine Loop: Continuously spawn particles and update physics positions
     useEffect(() => {
         let animationFrameId;
-        const GRAVITY = 0.5;
-        const TERMINAL_VELOCITY = 15;
+        const GRAVITY = 0.25; // Adjusted down from 0.5 to slow down falling speed
+        const TERMINAL_VELOCITY = 10; // Adjusted down from 15 to cap maximum falling speed
         const FLOOR_Y = canvasRef.current ? canvasRef.current.clientHeight - 40 : 800; // Approximate floor line
 
-        let lastToolPos = { ...pointerPosRef.current };
-
         const loop = () => {
-            const currentPos = pointerPosRef.current;
-            const toolVx = isInteractingRef.current ? currentPos.x - lastToolPos.x : 0;
-            const toolVy = isInteractingRef.current ? currentPos.y - lastToolPos.y : 0;
-            lastToolPos = { ...currentPos };
-
             // 1. Spawning
             if (isInteractingRef.current) {
-                const { x, y } = currentPos;
+                const { x, y } = pointerPosRef.current;
 
                 // When rotated -35deg, the spout/opening is positioned toward the top-left of the center point
                 const spawnYOffset = -25;
                 const spawnXOffset = -35;
 
-                const startX = x + spawnXOffset;
-                const startY = y + spawnYOffset;
-
-                // Spawning
-                spawnParticles(startX, startY, activeCategory, toolVx, toolVy);
+                spawnParticles(x + spawnXOffset, y + spawnYOffset, activeCategory);
             }
 
             // 2. Physics Update Step
@@ -340,29 +286,7 @@ export default function Abhishek() {
 
                     let newX = p.x + newVx;
                     let newY = p.y + newVy;
-
-                    // --- Lightweight Murti Surface Collision ---
-                    // The Murti container is centrally aligned with a maxWidth of 380px.
-                    // So the body spans approximately +180px and -180px from the exact screen center.
-                    const centerX = window.innerWidth / 2;
-                    const bodyLeft = centerX - 160;   // Slight inset to account for Murti's arm gaps
-                    const bodyRight = centerX + 160;
-
-                    const isOverMurti = p.type === 'liquid' &&
-                        newX > bodyLeft &&
-                        newX < bodyRight &&
-                        newY > window.innerHeight * 0.15 &&
-                        newY < window.innerHeight * 0.75;
-
-                    if (isOverMurti) {
-                        // Apply surface friction / viscosity
-                        newVy = newVy * 0.55; // Huge gravity dampening (water slides instead of falls)
-                        newVx = newVx * 0.85; // Slow horizontal speed
-                        newY = p.y + newVy;
-                        newX = p.x + newVx;
-                    }
-
-                    let newLife = p.life - (isOverMurti ? 0.006 : 0.012); // Slower fade on body
+                    let newLife = p.life - 0.012; // Slower fade for distinct streams
 
 
                     // Floor Collision & Bounce
@@ -385,18 +309,8 @@ export default function Abhishek() {
         return () => cancelAnimationFrame(animationFrameId);
     }, [activeCategory, spawnParticles]);
 
-    // Show beautiful loading screen while high-res images are downloading into memory
-    if (!imagesLoaded) {
-        return (
-            <div className="page-loader-overlay">
-                <Loader2 className="spinner-icon" size={48} color="var(--primary-color)" />
-                <span className="text-gradient" style={{ fontSize: '1.2rem', fontWeight: '600' }}>Preparing Sacred Abhishek...</span>
-            </div>
-        );
-    }
-
     return (
-        <div className="page-container shangar-layout" style={{ animation: 'fadeIn 0.4s ease-out', touchAction: 'none', overscrollBehavior: 'none' }}>
+        <div className="page-container shangar-layout" style={{ animation: 'fadeIn 0.4s ease-out' }}>
             {/* Header */}
             <header style={{ padding: '24px 24px 12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                 <div>
@@ -455,10 +369,10 @@ export default function Abhishek() {
 
                             {/* Background Splashes (Behind Murti) */}
                             {accumulations.filter(a => a.type === 'liquid').map((acc) => (
-                                <div key={acc.id} className="accumulation" style={{
+                                <div key={acc.id} style={{
                                     position: 'absolute', left: acc.left, bottom: acc.bottom,
                                     width: `${acc.size}px`, height: `${acc.size * 0.4}px`, borderRadius: '50%',
-                                    background: acc.color, opacity: 0.6, zIndex: acc.layerZIndex, filter: 'blur(4px)'
+                                    background: acc.color, opacity: 0.5, zIndex: 1, filter: 'blur(3px)'
                                 }} />
                             ))}
 
@@ -486,21 +400,17 @@ export default function Abhishek() {
                                 }}
                             />
 
-                            {/* Foreground Deposits (In front of Murti) */}
-                            {accumulations.map((acc) => (
-                                acc.layerZIndex > 10 && (
-                                    <div key={acc.id} className="accumulation" style={{
-                                        position: 'absolute', left: acc.left, bottom: acc.bottom,
-                                        width: `${acc.size}px`, height: acc.type === 'liquid' ? `${acc.size * 0.4}px` : `${acc.size}px`,
-                                        background: acc.image ? `url("${encodeURI(acc.image)}") center/contain no-repeat` : acc.color,
-                                        borderRadius: acc.image ? '0' : (acc.type === 'liquid' ? '50%' : '30%'),
-                                        opacity: acc.type === 'liquid' ? 0.6 : 0.9,
-                                        zIndex: acc.layerZIndex,
-                                        filter: acc.type === 'liquid' ? 'blur(4px)' : 'none',
-                                        transform: acc.image || acc.type === 'liquid' ? 'none' : `rotate(${Math.random() * 360}deg)`,
-                                        boxShadow: acc.image || acc.type === 'liquid' ? 'none' : 'inset -2px -2px 4px rgba(0,0,0,0.2)'
-                                    }} />
-                                )
+                            {/* Foreground/Background Solid Deposits */}
+                            {accumulations.filter(a => a.type === 'solid').map((acc) => (
+                                <div key={acc.id} className="accumulation" style={{
+                                    position: 'absolute', left: acc.left, bottom: acc.bottom,
+                                    width: `${acc.size}px`, height: `${acc.size}px`,
+                                    background: acc.image ? `url("${encodeURI(acc.image)}") center/contain no-repeat` : acc.color,
+                                    borderRadius: acc.image ? '0' : '30%',
+                                    opacity: 0.9, zIndex: acc.layerZIndex || 15,
+                                    transform: acc.image ? 'none' : `rotate(${Math.random() * 360}deg)`,
+                                    boxShadow: acc.image ? 'none' : 'inset -2px -2px 4px rgba(0,0,0,0.2)'
+                                }} />
                             ))}
                         </div>
 
@@ -510,16 +420,25 @@ export default function Abhishek() {
                                 position: 'absolute',
                                 left: 0,
                                 top: 0,
-                                transform: `translate(${p.x}px, ${p.y}px)`,
+                                transform: `translate(${p.x}px, ${p.y}px) ${p.type === 'liquid' ? `scaleY(${1 + p.vy / 10})` : ''}`,
+                                transformOrigin: 'bottom center',
                                 width: `${p.size}px`,
-                                height: p.type === 'liquid' ? `${p.size + p.vy * 1.5}px` : `${p.size}px`,
-                                background: p.image ? `url("${encodeURI(p.image)}") center/contain no-repeat` : p.color,
-                                borderRadius: p.image ? '0' : (p.type === 'liquid' ? '50% 50% 40% 40%' : '20%'),
-                                opacity: Math.max(0, p.life),
+                                height: p.type === 'liquid' ? `${p.size * 1.3}px` : `${p.size}px`,
+                                background: p.image
+                                    ? `url("${encodeURI(p.image)}") center/contain no-repeat`
+                                    : (p.type === 'liquid' ? `linear-gradient(135deg, rgba(255,255,255,0.7) 0%, ${p.color} 50%, rgba(0,0,0,0.1) 100%)` : p.color),
+                                borderRadius: p.image
+                                    ? '0'
+                                    : (p.type === 'liquid' ? '50% 50% 50% 50% / 60% 60% 40% 40%' : '20%'),
+                                opacity: Math.max(0, p.life) * (p.type === 'liquid' ? 0.85 : 1),
                                 pointerEvents: 'none',
-                                zIndex: p.layerZIndex,
-                                willChange: 'transform, opacity, height',
-                                boxShadow: p.image ? 'none' : 'inset -2px -2px 4px rgba(0,0,0,0.2)'
+                                zIndex: p.layerZIndex || 20,
+                                willChange: 'transform, opacity',
+                                boxShadow: p.image
+                                    ? 'none'
+                                    : (p.type === 'liquid'
+                                        ? 'inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -2px 4px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)'
+                                        : 'inset -2px -2px 4px rgba(0,0,0,0.2)')
                             }} />
                         ))}
 
@@ -542,8 +461,8 @@ export default function Abhishek() {
                             }}>
                                 <img
                                     src={
-                                        activeCategory.options && activeSubItem
-                                            ? activeCategory.options.find(o => o.id === activeSubItem)?.preview
+                                        (activeCategory.options && activeSubItem && activeCategory.options.find(o => o.id === activeSubItem)?.preview)
+                                            ? activeCategory.options.find(o => o.id === activeSubItem).preview
                                             : `/abhishek/${activeCategory.tool}.png`
                                     }
                                     alt={activeCategory.tool}
@@ -566,14 +485,14 @@ export default function Abhishek() {
                     flexDirection: 'column',
                     boxShadow: 'var(--shadow-lg)'
                 }}>
-                    <div style={{ padding: '20px', background: 'rgba(255,255,255,0.5)', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
+                    <div style={{ padding: '20px', background: 'var(--abhishek-panel-bg)', borderBottom: 'var(--abhishek-panel-border)' }}>
                         <h2 style={{ fontSize: '1.2rem', color: 'var(--primary-dark)', marginBottom: '4px' }}>Sacred Offerings</h2>
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Select an item to offer.</p>
                     </div>
 
-                    {/* Sub-Menu for Categories with dynamic options (e.g. Flowers, Dry Fruits) */}
-                    {activeCategory.options && activeCategory.options.length > 0 && (
-                        <div className="scrollable-row" style={{ display: 'flex', gap: '12px', padding: '16px', background: 'rgba(255,255,255,0.6)', borderBottom: '1px solid rgba(0,0,0,0.05)', overflowX: 'auto' }}>
+                    {/* Sub-Menu for Categories with strict options (e.g. Flowers) */}
+                    {activeCategory.options && (
+                        <div className="scrollable-row" style={{ display: 'flex', gap: '12px', padding: '16px', background: 'var(--abhishek-subpanel-bg)', borderBottom: 'var(--abhishek-subpanel-border)', overflowX: 'auto' }}>
                             {activeCategory.options.map(opt => {
                                 const isSubActive = activeSubItem === opt.id;
                                 return (
@@ -588,16 +507,20 @@ export default function Abhishek() {
                                             flexDirection: 'column',
                                             justifyContent: 'center',
                                             alignItems: 'center',
-                                            background: isSubActive ? 'rgba(255,123,0,0.1)' : 'white',
-                                            border: isSubActive ? `2px solid var(--primary-color)` : '1px solid rgba(0,0,0,0.05)',
-                                            boxShadow: isSubActive ? 'none' : 'var(--shadow-sm)',
+                                            background: isSubActive ? 'var(--abhishek-btn-active-bg)' : 'var(--abhishek-btn-inactive-bg)',
+                                            border: isSubActive ? 'var(--abhishek-btn-active-border)' : 'var(--abhishek-btn-inactive-border)',
+                                            boxShadow: isSubActive ? 'var(--abhishek-btn-active-shadow)' : 'var(--abhishek-btn-inactive-shadow)',
                                             transition: 'all 0.2s',
                                             cursor: 'pointer',
                                             padding: '8px'
                                         }}
                                     >
-                                        <img src={opt.preview} alt={opt.name} style={{ width: '40px', height: '40px', objectFit: 'contain', marginBottom: '4px', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }} />
-                                        <span style={{ fontSize: '0.7rem', fontWeight: isSubActive ? '700' : '500', color: isSubActive ? 'var(--primary-dark)' : 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                                        {opt.preview ? (
+                                            <img src={opt.preview} alt={opt.name} style={{ width: '40px', height: '40px', objectFit: 'contain', marginBottom: '4px', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }} />
+                                        ) : (
+                                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: opt.color || 'gray', marginBottom: '8px', boxShadow: 'inset -2px -2px 4px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)' }} />
+                                        )}
+                                        <span style={{ fontSize: '0.7rem', fontWeight: isSubActive ? '700' : '500', color: isSubActive ? 'var(--primary-light)' : 'var(--abhishek-text-muted)', whiteSpace: 'nowrap' }}>
                                             {opt.name}
                                         </span>
                                     </button>
@@ -629,10 +552,10 @@ export default function Abhishek() {
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         gap: '8px',
-                                        background: isActive ? 'linear-gradient(135deg, var(--primary-color), var(--secondary-color))' : 'white',
-                                        color: isActive ? 'white' : 'var(--text-main)',
-                                        border: isActive ? 'none' : '1px solid rgba(0,0,0,0.05)',
-                                        boxShadow: isActive ? '0 8px 15px rgba(255,123,0,0.3)' : 'var(--shadow-sm)',
+                                        background: isActive ? 'var(--abhishek-cat-active-bg)' : 'var(--abhishek-cat-inactive-bg)',
+                                        color: isActive ? 'var(--abhishek-cat-active-color)' : 'var(--abhishek-cat-inactive-color)',
+                                        border: isActive ? 'var(--abhishek-cat-active-border)' : 'var(--abhishek-cat-inactive-border)',
+                                        boxShadow: isActive ? 'var(--abhishek-cat-active-shadow)' : 'var(--abhishek-cat-inactive-shadow)',
                                         transition: 'all 0.2s',
                                         cursor: 'pointer'
                                     }}

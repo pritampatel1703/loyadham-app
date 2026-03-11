@@ -5,7 +5,7 @@ import { Home, ClipboardList, Gamepad2, Sparkles, Droplet, Sun, Moon } from 'luc
 // Placeholders for Pages
 import Dashboard from './pages/Dashboard';
 import Niyams from './pages/Niyams';
-import Smruti from './pages/Smruti';
+import GamesHub from './pages/GamesHub';
 import Shangar from './pages/Shangar';
 import Abhishek from './pages/Abhishek';
 
@@ -87,7 +87,7 @@ function App() {
           <Route path="/shangar" element={<Shangar />} />
           <Route path="/abhishek" element={<Abhishek />} />
           <Route path="/niyams" element={<Niyams />} />
-          <Route path="/games" element={<Smruti />} />
+          <Route path="/games" element={<GamesHub />} />
         </Routes>
       </Layout>
     </BrowserRouter>

@@ -175,36 +175,78 @@ export default function HariSaga({ onBack }) {
     }, [board]);
 
 
-    // Handlers
-    const handleDragStart = (e) => {
-        if (isFalling || isAnimating || moves <= 0) return; // Disallow actions while matching or dead
-        setDraggedItem(e.target);
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-    };
-
-    const handleDragEnter = (e) => {
-        e.preventDefault();
-    };
-
-    const handleDragLeave = (e) => {
-        e.preventDefault();
-    };
-
-    const handleDrop = (e) => {
+    // Touch / Swipe System
+    const handleSwipeStart = (e) => {
         if (isFalling || isAnimating || moves <= 0) return;
-        setTargetItem(e.target);
+        
+        // Find the closest draggable tile div (stops images from hijacking event)
+        const tile = e.target.closest('[data-id]');
+        if (!tile) return;
+
+        const index = parseInt(tile.getAttribute('data-id'));
+        
+        // Support both touch and mouse events globally
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        setDraggedItem({
+            id: index,
+            startX: clientX,
+            startY: clientY,
+            element: tile
+        });
     };
 
-    const handleDragEnd = (e) => {
-        if (isFalling || isAnimating || moves <= 0 || !draggedItem || !targetItem) return;
+    const handleSwipeMove = (e) => {
+        // Prevent default scrolling only if we are actively swiping a candy to ensure the page doesn't yank
+        if (draggedItem) {
+            e.preventDefault(); 
+        }
+    };
 
-        const draggedId = parseInt(draggedItem.getAttribute('data-id'));
-        const targetId = parseInt(targetItem.getAttribute('data-id'));
+    const handleSwipeEnd = (e) => {
+        if (isFalling || isAnimating || moves <= 0 || !draggedItem) return;
 
-        // Validate Adjacency (Left, Right, Up, Down)
+        // For touchend, changedTouches contains the last coordinates
+        const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+        const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+        const diffX = clientX - draggedItem.startX;
+        const diffY = clientY - draggedItem.startY;
+        
+        const draggedId = draggedItem.id;
+        let targetId = -1;
+
+        // We require a minimum distance of 20px to count as a swipe so taps don't trigger it
+        if (Math.abs(diffX) < 20 && Math.abs(diffY) < 20) {
+            setDraggedItem(null);
+            return;
+        }
+
+        // Determine swipe direction based on greatest axis delta
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            // Horizontal Swipe
+            if (diffX > 0) {
+                targetId = draggedId + 1; // Swipe Right
+            } else {
+                targetId = draggedId - 1; // Swipe Left
+            }
+        } else {
+            // Vertical Swipe
+            if (diffY > 0) {
+                targetId = draggedId + BOARD_SIZE; // Swipe Down
+            } else {
+                targetId = draggedId - BOARD_SIZE; // Swipe Up
+            }
+        }
+
+        // Reset drag tracker early
+        setDraggedItem(null);
+
+        // If target is out of bounds
+        if (targetId < 0 || targetId >= BOARD_SIZE * BOARD_SIZE) return;
+
+        // Validate Adjacency & Wrapping (Left, Right, Up, Down)
         const isAdjacent = 
             targetId === draggedId - 1 || 
             targetId === draggedId + 1 || 
@@ -221,16 +263,21 @@ export default function HariSaga({ onBack }) {
             setIsAnimating(true);
             
             // Calculate pixel distance for animation
-            const draggedRect = draggedItem.getBoundingClientRect();
-            const targetRect = targetItem.getBoundingClientRect();
+            const isHorizontal = Math.abs(targetId - draggedId) === 1;
+            const dir = targetId > draggedId ? 1 : -1;
             
-            const dx = targetRect.left - draggedRect.left;
-            const dy = targetRect.top - draggedRect.top;
+            const translateStringOffset = isHorizontal 
+                ? `translate(${dir * 110}%, 0)` 
+                : `translate(0, ${dir * 110}%)`;
 
-            // Set temporary animation state
+            const translateStringTarget = isHorizontal 
+                ? `translate(${-dir * 110}%, 0)` 
+                : `translate(0, ${-dir * 110}%)`;
+
+            // Set temporary animation state directly as CSS strings
             setAnimatingTiles([
-                { id: draggedId, x: dx, y: dy },
-                { id: targetId, x: -dx, y: -dy }
+                { id: draggedId, transform: translateStringOffset },
+                { id: targetId, transform: translateStringTarget }
             ]);
 
             // Wait for CSS transition (200ms) before snapping state
@@ -250,22 +297,18 @@ export default function HariSaga({ onBack }) {
                     setAnimatingTiles([]);
                     setIsAnimating(false);
                 } else {
-                    // Revert swap (Bounce back animation)
+                    // Revert swap visual only
                     setAnimatingTiles([
-                        { id: draggedId, x: 0, y: 0 },
-                        { id: targetId, x: 0, y: 0 }
+                        { id: draggedId, transform: 'translate(0,0)' },
+                        { id: targetId, transform: 'translate(0,0)' }
                     ]);
                     setTimeout(() => {
                         setAnimatingTiles([]);
                         setIsAnimating(false);
-                    }, 200); // 200ms to bounce back
+                    }, 200); 
                 }
-            }, 200); // 200ms to slide forward
-            
+            }, 200); 
         }
-
-        setDraggedItem(null);
-        setTargetItem(null);
     };
 
     return (
@@ -321,13 +364,10 @@ export default function HariSaga({ onBack }) {
                         <div
                             key={index}
                             data-id={index}
-                            draggable={true}
-                            onDragStart={handleDragStart}
-                            onDragOver={handleDragOver}
-                            onDragEnter={handleDragEnter}
-                            onDragLeave={handleDragLeave}
-                            onDrop={handleDrop}
-                            onDragEnd={handleDragEnd}
+                            onPointerDown={handleSwipeStart}
+                            onPointerMove={handleSwipeMove}
+                            onPointerUp={handleSwipeEnd}
+                            onPointerCancel={handleSwipeEnd}
                             style={{
                                 width: '100%',
                                 height: '100%',
@@ -342,9 +382,10 @@ export default function HariSaga({ onBack }) {
                                 opacity: item === '' ? 0 : 1, // Hide during match/clear phase easily
                                 transition: 'transform 0.2s ease-in-out, opacity 0.2s',
                                 transform: animatingTiles.find(t => t.id === index) 
-                                    ? `translate(${animatingTiles.find(t => t.id === index).x}px, ${animatingTiles.find(t => t.id === index).y}px)` 
-                                    : 'translate(0px, 0px)',
-                                zIndex: animatingTiles.find(t => t.id === index) ? 10 : 1
+                                    ? animatingTiles.find(t => t.id === index).transform 
+                                    : 'translate(0, 0)',
+                                zIndex: animatingTiles.find(t => t.id === index) ? 10 : 1,
+                                touchAction: 'none' // Crucial for preventing mobile scroll while swiping
                             }}
                         >
                             {/* Make draggable region robust */}

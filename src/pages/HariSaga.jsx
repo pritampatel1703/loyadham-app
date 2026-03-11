@@ -198,10 +198,36 @@ export default function HariSaga({ onBack }) {
     };
 
     const handleSwipeMove = (e) => {
-        // Prevent default scrolling only if we are actively swiping a candy to ensure the page doesn't yank
-        if (draggedItem) {
-            e.preventDefault(); 
+        if (!draggedItem || isFalling || isAnimating || moves <= 0) return;
+        
+        // Prevent generic scrolling while interacting
+        e.preventDefault(); 
+        
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const diffX = clientX - draggedItem.startX;
+        const diffY = clientY - draggedItem.startY;
+        
+        // Cap visual dragging to a maximum of ~100% of the tile width/height (roughly 40px depending on screen)
+        // We calculate which axis is the primary swipe axis to restrict diagonal movement
+        let moveX = 0;
+        let moveY = 0;
+        
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            // Horizontal drag
+            moveX = Math.max(-50, Math.min(50, diffX));
+        } else {
+            // Vertical drag
+            moveY = Math.max(-50, Math.min(50, diffY));
         }
+
+        // Apply real-time drag translation
+        setDraggedItem({
+            ...draggedItem,
+            currentX: moveX,
+            currentY: moveY
+        });
     };
 
     const handleSwipeEnd = (e) => {
@@ -380,20 +406,22 @@ export default function HariSaga({ onBack }) {
                                 overflow: 'hidden',
                                 boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
                                 opacity: item === '' ? 0 : 1, // Hide during match/clear phase easily
-                                transition: 'transform 0.2s ease-in-out, opacity 0.2s',
+                                transition: draggedItem && draggedItem.id === index ? 'none' : 'transform 0.2s ease-in-out, opacity 0.2s',
                                 transform: animatingTiles.find(t => t.id === index) 
                                     ? animatingTiles.find(t => t.id === index).transform 
-                                    : 'translate(0, 0)',
-                                zIndex: animatingTiles.find(t => t.id === index) ? 10 : 1,
-                                touchAction: 'none' // Crucial for preventing mobile scroll while swiping
+                                    : (draggedItem && draggedItem.id === index ? `translate(${draggedItem.currentX || 0}px, ${draggedItem.currentY || 0}px)` : 'translate(0, 0)'),
+                                zIndex: (animatingTiles.find(t => t.id === index) || (draggedItem && draggedItem.id === index)) ? 10 : 1,
+                                touchAction: 'none', // Crucial for preventing mobile scroll while swiping
+                                userSelect: 'none', // Prevent text highlighting
+                                WebkitUserSelect: 'none'
                             }}
                         >
                             {/* Make draggable region robust */}
                             <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
                                 {GAME_IMAGES.length > 0 ? (
-                                    item ? <img src={item} alt="candy" style={{ width: '85%', height: '85%', objectFit: 'contain' }} /> : null
+                                    item ? <img src={item} alt="candy" style={{ width: '85%', height: '85%', objectFit: 'contain', userSelect: 'none', WebkitUserDrag: 'none' }} draggable="false" /> : null
                                 ) : (
-                                    <span style={{ fontSize: '2rem' }}>{item}</span>
+                                    <span style={{ fontSize: '2rem', userSelect: 'none' }}>{item}</span>
                                 )}
                             </div>
                         </div>

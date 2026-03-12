@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Gamepad2, Trophy, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Gamepad2, Trophy, RefreshCw, Volume2, VolumeX } from 'lucide-react';
 
 // Use same dynamic images as Smruti
 const rawImages = import.meta.glob('/public/games/smurti game/*.{png,jpg,jpeg,webp}', { eager: true });
@@ -13,8 +13,14 @@ export default function HariSaga({ onBack }) {
     const [board, setBoard] = useState([]);
     const [candies, setCandies] = useState([]);
     const [score, setScore] = useState(0);
+    const [highScore, setHighScore] = useState(0);
     const [moves, setMoves] = useState(20);
+    const [gameState, setGameState] = useState('playing'); // playing, gameover
     const [draggedItem, setDraggedItem] = useState(null);
+    const [soundEnabled, setSoundEnabled] = useState(true);
+    
+    // Audio Context Ref for synthesized sounds
+    const audioCtxRef = useRef(null);
     const [targetItem, setTargetItem] = useState(null);
     const [isFalling, setIsFalling] = useState(false); // prevent interactions during cascade
     
@@ -22,8 +28,13 @@ export default function HariSaga({ onBack }) {
     const [animatingTiles, setAnimatingTiles] = useState([]); // Array of { id, x, y }
     const [isAnimating, setIsAnimating] = useState(false);
 
-    // Initialize the available candy pool
+    // Initialize the available candy pool and High Score
     useEffect(() => {
+        const savedHighScore = localStorage.getItem('hariSagaHighScore');
+        if (savedHighScore) {
+            setHighScore(parseInt(savedHighScore, 10));
+        }
+
         let pool = [];
         if (GAME_IMAGES.length >= UNIQUE_CANDIES) {
             pool = [...GAME_IMAGES].sort(() => Math.random() - 0.5).slice(0, UNIQUE_CANDIES);
@@ -33,7 +44,59 @@ export default function HariSaga({ onBack }) {
             pool = [...FALLBACK_ITEMS].slice(0, Math.min(UNIQUE_CANDIES, FALLBACK_ITEMS.length));
         }
         setCandies(pool);
+
+        // Init Audio Context on first mount
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+            audioCtxRef.current = new AudioContext();
+        }
+
+        return () => {
+            if (audioCtxRef.current) {
+                audioCtxRef.current.close();
+            }
+        };
     }, []);
+
+    // Helper to play synthesized sounds
+    const playSound = (type) => {
+        if (!soundEnabled || !audioCtxRef.current) return;
+        
+        // Resume context if suspended (browser auto-play policy)
+        if (audioCtxRef.current.state === 'suspended') {
+            audioCtxRef.current.resume();
+        }
+
+        const oscillator = audioCtxRef.current.createOscillator();
+        const gainNode = audioCtxRef.current.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtxRef.current.destination);
+
+        const now = audioCtxRef.current.currentTime;
+
+        if (type === 'match') {
+            // Cheerful Pop
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(400, now);
+            oscillator.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            oscillator.start(now);
+            oscillator.stop(now + 0.2);
+        } else if (type === 'gameover') {
+            // Descending chime
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(600, now);
+            oscillator.frequency.exponentialRampToValueAtTime(200, now + 0.5);
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.4, now + 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+            oscillator.start(now);
+            oscillator.stop(now + 0.6);
+        }
+    };
 
     // Create a new random board when candies are ready
     useEffect(() => {
@@ -52,6 +115,8 @@ export default function HariSaga({ onBack }) {
         setBoard(newBoard);
         setScore(0);
         setMoves(20);
+        setGameState('playing');
+        setIsFalling(false);
     };
 
     // Check for matches
@@ -146,18 +211,23 @@ export default function HariSaga({ onBack }) {
 
     // Cascade engine
     useEffect(() => {
-        if (board.length === 0) return;
+        if (board.length === 0 || gameState !== 'playing') return;
 
         const timer = setInterval(() => {
             const newBoard = [...board];
             let changesMade = false;
+            let matchMadeThisTick = false;
 
             // Priority: Check Fours, then Threes, then Gravity
-            if (checkForColumnOfFour(newBoard)) { changesMade = true; setScore(s => s + 40); }
-            if (checkForRowOfFour(newBoard)) { changesMade = true; setScore(s => s + 40); }
-            if (checkForColumnOfThree(newBoard)) { changesMade = true; setScore(s => s + 30); }
-            if (checkForRowOfThree(newBoard)) { changesMade = true; setScore(s => s + 30); }
+            if (checkForColumnOfFour(newBoard)) { changesMade = true; matchMadeThisTick = true; setScore(s => s + 40); }
+            if (checkForRowOfFour(newBoard)) { changesMade = true; matchMadeThisTick = true; setScore(s => s + 40); }
+            if (checkForColumnOfThree(newBoard)) { changesMade = true; matchMadeThisTick = true; setScore(s => s + 30); }
+            if (checkForRowOfThree(newBoard)) { changesMade = true; matchMadeThisTick = true; setScore(s => s + 30); }
             
+            if (matchMadeThisTick) {
+                playSound('match');
+            }
+
             if (moveDown(newBoard)) {
                 changesMade = true;
             }
@@ -167,17 +237,27 @@ export default function HariSaga({ onBack }) {
                 setIsFalling(true);
             } else {
                 setIsFalling(false);
+                // Check Win/Loss Condition when board is fully settled
+                if (moves <= 0) {
+                    setGameState('gameover');
+                    playSound('gameover');
+                    // Handle High Score
+                    if (score > highScore) {
+                        setHighScore(score);
+                        localStorage.setItem('hariSagaHighScore', score.toString());
+                    }
+                }
             }
 
         }, 150); // fast cascade
 
         return () => clearInterval(timer);
-    }, [board]);
+    }, [board, moves, score, gameState]);
 
 
     // Touch / Swipe System
     const handleSwipeStart = (e) => {
-        if (isFalling || isAnimating || moves <= 0) return;
+        if (isFalling || isAnimating || moves <= 0 || gameState !== 'playing') return;
         
         // Find the closest draggable tile div (stops images from hijacking event)
         const tile = e.target.closest('[data-id]');
@@ -198,7 +278,7 @@ export default function HariSaga({ onBack }) {
     };
 
     const handleSwipeMove = (e) => {
-        if (!draggedItem || isFalling || isAnimating || moves <= 0) return;
+        if (!draggedItem || isFalling || isAnimating || moves <= 0 || gameState !== 'playing') return;
         
         // Prevent generic scrolling while interacting
         e.preventDefault(); 
@@ -231,7 +311,7 @@ export default function HariSaga({ onBack }) {
     };
 
     const handleSwipeEnd = (e) => {
-        if (isFalling || isAnimating || moves <= 0 || !draggedItem) return;
+        if (isFalling || isAnimating || moves <= 0 || !draggedItem || gameState !== 'playing') return;
 
         // For touchend, changedTouches contains the last coordinates
         const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
@@ -352,6 +432,9 @@ export default function HariSaga({ onBack }) {
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-secondary" onClick={() => setSoundEnabled(!soundEnabled)} style={{ padding: '8px 12px', borderRadius: '12px' }}>
+                        {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                    </button>
                     <button className="btn btn-primary" onClick={createNewBoard} style={{ padding: '8px 12px', borderRadius: '12px' }}>
                         <RefreshCw size={18} />
                     </button>
@@ -359,20 +442,59 @@ export default function HariSaga({ onBack }) {
             </header>
 
             {/* Status Bar */}
-            <div className="glass-panel" style={{ padding: '8px 16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-                <div style={{ textAlign: 'center' }}>
+            <div className="glass-panel" style={{ padding: '8px 16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ textAlign: 'center', flex: 1 }}>
                     <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>Moves Left</p>
-                    <p style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0 }}>{moves}</p>
+                    <p style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0, color: moves <= 5 ? '#f43f5e' : 'inherit' }}>{moves}</p>
                 </div>
                 <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
-                <div style={{ textAlign: 'center' }}>
+                <div style={{ textAlign: 'center', flex: 1 }}>
                     <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>Score</p>
                     <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#EC4899', margin: 0 }}>{score}</p>
                 </div>
+                <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>Best</p>
+                    <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary-light)', margin: 0 }}>{Math.max(score, highScore)}</p>
+                </div>
             </div>
 
-            {/* Game Board */}
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0 }}>
+            {/* Game Board Container*/}
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 0, position: 'relative' }}>
+                
+                {/* Game Over Overlay */}
+                {gameState === 'gameover' && (
+                    <div className="glass-panel" style={{
+                        position: 'absolute',
+                        zIndex: 100,
+                        width: '80%',
+                        maxWidth: '300px',
+                        padding: '32px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '16px',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                        border: '1px solid rgba(255,255,255,0.2)'
+                    }}>
+                        <Trophy size={48} color="#f59e0b" style={{ marginBottom: '8px' }} />
+                        <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#fff' }}>Game Over!</h2>
+                        <div style={{ textAlign: 'center' }}>
+                            <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>Final Score</p>
+                            <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold', color: '#EC4899' }}>{score}</p>
+                        </div>
+                        {score >= highScore && score > 0 && (
+                            <div style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fcd34d', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                New High Score!
+                            </div>
+                        )}
+                        <button className="btn btn-primary" onClick={createNewBoard} style={{ marginTop: '16px', padding: '12px 24px', fontSize: '1.1rem', width: '100%', borderRadius: '12px' }}>
+                            Play Again
+                        </button>
+                    </div>
+                )}
+
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: `repeat(${BOARD_SIZE}, 1fr)`,
